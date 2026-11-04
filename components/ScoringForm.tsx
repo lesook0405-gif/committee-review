@@ -16,8 +16,9 @@ type ScoringFormProps = {
   initial?: { criteria: { name: string; maxScore: number }[]; passScore: number; excludeExtremes: boolean };
 };
 
+// 폭은 칸마다 따로 준다 (공통 모양에 폭을 넣으면 좁은 칸의 폭이 무시된다)
 const 입력칸 =
-  "block min-h-11 w-full rounded-md border border-border bg-surface px-3 text-base " +
+  "block min-h-11 rounded-md border border-border bg-surface px-3 text-base " +
   "focus:border-primary focus:outline-2 focus:outline-primary";
 
 const 기본_항목: Row[] = [{ name: "", maxScore: "" }];
@@ -51,7 +52,7 @@ export function ScoringForm({ mode, action, initial }: ScoringFormProps) {
             onChange={(e) => setName(e.target.value)}
             required
             maxLength={100}
-            className={`mt-1 ${입력칸}`}
+            className={`mt-1 w-full ${입력칸}`}
             placeholder="예: 투자심사위원회"
           />
         </label>
@@ -72,7 +73,7 @@ export function ScoringForm({ mode, action, initial }: ScoringFormProps) {
                 onChange={(e) => 항목_바꾸기(index, "name", e.target.value)}
                 maxLength={50}
                 placeholder="항목 이름 (예: 적정성)"
-                className={`${입력칸} min-w-0 flex-1 basis-48`}
+                className={`${입력칸} min-w-0 flex-1 basis-40`}
               />
               <input
                 name="criteriaMax"

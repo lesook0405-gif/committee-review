@@ -4,6 +4,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
 import { createAdminClient } from "@/lib/db/supabase";
 
@@ -46,6 +47,8 @@ export async function endSession(): Promise<void> {
  * (쿠키에 적힌 역할을 그대로 믿지 않는다 — 역할이 바뀌거나 계정이 지워지면 즉시 반영)
  */
 export async function getCurrentStaff(): Promise<CurrentStaff | null> {
+  // 만료 확인에 "지금 시각"을 쓰므로, 화면을 미리 만들어 두지 말고 요청이 올 때 계산하라고 알린다 (cacheComponents 규칙)
+  await connection();
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = verifySessionToken(token, process.env.SESSION_SECRET);
   if (!session) return null;
