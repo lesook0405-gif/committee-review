@@ -1,26 +1,37 @@
+/* Design Ref: §3 화면 구성 — 공통 색상·글꼴. 회사 노트북·태블릿에서 보기 쉬운 밝은 화면 하나로 통일한다. */
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f7fa;   /* 화면 바탕 */
+  --surface: #ffffff;      /* 카드·상단 메뉴 바탕 */
+  --foreground: #1f2933;   /* 기본 글자 */
+  --muted: #5f6b7a;        /* 보조 글자 */
+  --border: #d9dee5;       /* 테두리 */
+  --primary: #1d4ed8;      /* 주요 버튼·링크 */
+  --primary-hover: #1e40af;
+  --danger: #b91c1c;       /* 경고·삭제 */
+  --success: #15803d;      /* 가결·완료 */
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  /* 한글이 잘 보이는 시스템 글꼴 (인터넷에서 글꼴을 내려받지 않는다) */
+  --font-sans: "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", "Noto Sans KR", system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  /* 한국어 단어가 중간에서 끊기지 않게 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
