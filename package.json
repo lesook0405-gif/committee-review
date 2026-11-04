@@ -9,13 +9,15 @@
     "lint": "eslint",
     "check:supabase": "node --env-file=.env.local scripts/check-supabase.mts",
     "seed": "node --env-file=.env.local scripts/seed.mts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:login": "node --env-file=.env.local scripts/check-login.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
     "next": "16.4.5",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
