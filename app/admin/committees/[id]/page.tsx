@@ -1,5 +1,5 @@
 // Design Ref: §3.2 ③ 위원회 상세 (/admin/committees/{id}) — 탭 3개: 평가 방식 · 위원 명단 · 회의
-// 평가 방식 탭(작업 7), 위원 명단 탭(작업 8). 회의 탭은 작업 9에서 채운다.
+// 평가 방식 탭(작업 7), 위원 명단 탭(작업 8), 회의 탭(작업 9)
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +15,7 @@ import { isUuid } from "@/lib/rules/ids";
 
 import { updateScoringAction } from "../actions";
 
+import { MeetingsTab } from "./MeetingsTab";
 import { MembersTab } from "./MembersTab";
 
 export const metadata: Metadata = { title: "위원회 상세" };
@@ -73,11 +74,7 @@ async function Committee({ params, searchParams }: PageProps<"/admin/committees/
 
       {current === "scoring" ? <ScoringTab committee={committee} canEdit={staff.role === "staff"} /> : null}
       {current === "members" ? <MembersTab committeeId={committee.id} canEdit={staff.role === "staff"} /> : null}
-      {current === "meetings" ? (
-        <p className="rounded-lg border border-dashed border-border bg-surface p-6 text-center text-muted">
-          회의 목록은 다음 작업(PLAN 작업 9)에서 연결됩니다.
-        </p>
-      ) : null}
+      {current === "meetings" ? <MeetingsTab committeeId={committee.id} canEdit={staff.role === "staff"} /> : null}
     </>
   );
 }
