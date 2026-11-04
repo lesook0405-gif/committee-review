@@ -8,6 +8,8 @@
 //   샘플이 아닌 데이터는 건드리지 않는다. 계정 비밀번호는 .env.local에서 읽고 화면에 출력하지 않는다.
 import { createClient } from "@supabase/supabase-js";
 
+import type { Database } from "../types/database.ts";
+
 const 샘플_표시 = "[샘플]";
 const 보관함 = "agendas";
 
@@ -20,17 +22,21 @@ function 환경값(이름: string): string {
   return 값;
 }
 
-const db = createClient(환경값("SUPABASE_URL"), 환경값("SUPABASE_SERVICE_ROLE_KEY"), {
+const db = createClient<Database>(환경값("SUPABASE_URL"), 환경값("SUPABASE_SERVICE_ROLE_KEY"), {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
 // 작업 중 오류가 나면 무엇이 실패했는지 한국어로 알리고 멈춘다
-function 확인<T>(단계: string, 결과: { data: T; error: { message: string } | null }): T {
+// (성공했을 때의 data 모양을 그대로 돌려준다)
+function 확인<R extends { data: unknown; error: { message: string } | null }>(
+  단계: string,
+  결과: R,
+): NonNullable<Extract<R, { error: null }>["data"]> {
   if (결과.error) {
     console.error(`❌ ${단계} 실패 — ${결과.error.message}`);
     process.exit(1);
   }
-  return 결과.data;
+  return 결과.data as NonNullable<Extract<R, { error: null }>["data"]>;
 }
 
 // ─────────────────────────────────────────────
