@@ -10,7 +10,8 @@
     "check:supabase": "node --env-file=.env.local scripts/check-supabase.mts",
     "seed": "node --env-file=.env.local scripts/seed.mts",
     "test": "vitest run",
-    "check:login": "node --env-file=.env.local scripts/check-login.mts"
+    "check:login": "node --env-file=.env.local scripts/check-login.mts",
+    "check:committees": "node --env-file=.env.local scripts/check-committees.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

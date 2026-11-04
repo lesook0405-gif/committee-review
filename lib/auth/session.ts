@@ -67,11 +67,17 @@ export async function requireStaff(): Promise<CurrentStaff> {
   return staff;
 }
 
+/** 팀장이 등록·수정·마감을 시도했을 때의 오류 */
+export class NotEditorError extends Error {
+  constructor() {
+    super("팀장 계정은 열람만 할 수 있습니다. 등록·수정·마감은 담당 팀원 계정으로 해 주세요.");
+    this.name = "NotEditorError";
+  }
+}
+
 /** 등록·수정·마감 같은 처리용: 담당 팀원만 통과 (팀장은 열람만 — PRD 4번) */
 export async function requireEditor(): Promise<CurrentStaff> {
   const staff = await requireStaff();
-  if (staff.role !== "staff") {
-    throw new Error("팀장 계정은 열람만 할 수 있습니다. 등록·수정·마감은 담당 팀원 계정으로 해 주세요.");
-  }
+  if (staff.role !== "staff") throw new NotEditorError();
   return staff;
 }
