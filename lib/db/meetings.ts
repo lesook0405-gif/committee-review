@@ -3,7 +3,9 @@
 import "server-only";
 
 import type { MeetingInput } from "@/lib/rules/meeting";
+import { linkState, type LinkState } from "@/lib/rules/member-link";
 
+import { newLinkFields } from "./link-fields";
 import { createAdminClient } from "./supabase";
 
 export type MeetingStatus = "open" | "closed";
@@ -34,6 +36,9 @@ export type ParticipantRow = {
   name: string;
   email: string;
   state: ParticipantState;
+  /** 링크 상태 (링크값 자체는 넣지 않는다 — 복사는 담당 팀원이 따로 요청) */
+  link: LinkState;
+  linkIssuedAt: string | null;
 };
 
 const asStatus = (value: string): MeetingStatus => (value === "closed" ? "closed" : "open");
@@ -76,22 +81,24 @@ export async function getMeeting(meetingId: string): Promise<MeetingDetail | nul
 }
 
 /** 위원회 위원 전체와, 이 회의에서의 참석 상태 */
-export async function listParticipants(meeting: Pick<MeetingDetail, "id" | "committeeId">): Promise<ParticipantRow[]> {
+export async function listParticipants(meeting: Pick<MeetingDetail, "id" | "committeeId" | "closedAt">): Promise<ParticipantRow[]> {
   const db = createAdminClient();
   const [{ data: members, error: e1 }, { data: links, error: e2 }] = await Promise.all([
     db.from("members").select("id, name, email").eq("committee_id", meeting.committeeId).order("name"),
-    db.from("meeting_members").select("member_id, removed_at").eq("meeting_id", meeting.id),
+    db.from("meeting_members").select("member_id, removed_at, blocked_at, link_fingerprint, link_issued_at").eq("meeting_id", meeting.id),
   ]);
   if (e1 || e2) throw new Error(`참석 위원을 불러오지 못했습니다. (${(e1 ?? e2)!.message})`);
   const byMember = new Map(links.map((l) => [l.member_id, l]));
+  const now = new Date();
   return members.map((m) => {
-    const link = byMember.get(m.id);
-    const state: ParticipantState = !link ? "not-added" : link.removed_at ? "removed" : "participating";
-    return { memberId: m.id, name: m.name, email: m.email, state };
+    const link_ = byMember.get(m.id);
+    const state: ParticipantState = !link_ ? "not-added" : link_.removed_at ? "removed" : "participating";
+    const link: LinkState = !link_ ? "none" : linkState({ hasLink: !!link_.link_fingerprint, blockedAt: link_.blocked_at, removedAt: link_.removed_at }, meeting.closedAt, now);
+    return { memberId: m.id, name: m.name, email: m.email, state, link, linkIssuedAt: link_?.link_issued_at ?? null };
   });
 }
 
-/** 회의 등록 — 고른 위원(그 위원회 소속만)을 참석 위원으로 함께 넣는다. 새 회의 ID */
+/** 회의 등록 — 고른 위원(그 위원회 소속만)을 참석 위원으로 함께 넣고, 위원마다 다른 링크를 발급한다. 새 회의 ID */
 export async function createMeeting(committeeId: string, input: MeetingInput, memberIds: string[]): Promise<string> {
   const db = createAdminClient();
   const { data: meeting, error } = await db
@@ -104,7 +111,7 @@ export async function createMeeting(committeeId: string, input: MeetingInput, me
   if (memberIds.length > 0) {
     // 다른 위원회 위원 ID가 섞여 들어와도 이 위원회 소속만 남긴다
     const { data: valid } = await db.from("members").select("id").eq("committee_id", committeeId).in("id", memberIds);
-    const rows = (valid ?? []).map((m) => ({ meeting_id: meeting.id, member_id: m.id }));
+    const rows = (valid ?? []).map((m) => ({ meeting_id: meeting.id, member_id: m.id, ...newLinkFields() }));
     if (rows.length > 0) {
       const { error: e2 } = await db.from("meeting_members").insert(rows);
       if (e2) throw new Error(`참석 위원을 저장하지 못했습니다. (${e2.message})`);
@@ -152,21 +159,21 @@ async function 바꿀_수_있는지(meetingId: string, memberId: string): Promis
 
 /**
  * 회의에 위원 추가 — 처음이면 새로 넣고, 제외했던 위원이면 같은 기록을 되살린다(제외 시각을 지움).
- * 되살리면 그 위원이 이미 낸 평가는 다시 집계에 반영된다. (링크 새로 발급은 작업 11에서 연결)
+ * 되살리면 그 위원이 이미 낸 평가는 다시 집계에 반영된다. 어느 경우든 링크는 새로 발급한다(예전 링크는 못 씀).
  */
 export async function addParticipant(meetingId: string, memberId: string): Promise<ChangeResult> {
   const check = await 바꿀_수_있는지(meetingId, memberId);
   if (check !== "ok") return check;
   const { error } = await createAdminClient()
     .from("meeting_members")
-    .upsert({ meeting_id: meetingId, member_id: memberId, removed_at: null }, { onConflict: "meeting_id,member_id" });
+    .upsert({ meeting_id: meetingId, member_id: memberId, removed_at: null, ...newLinkFields() }, { onConflict: "meeting_id,member_id" });
   if (error) throw new Error(`참석 위원을 추가하지 못했습니다. (${error.message})`);
   return "ok";
 }
 
 /**
  * 회의에서 위원 제외 — 기록은 지우지 않고 제외 시각만 남긴다.
- * 이미 낸 평가는 남아 있지만 집계·분모에서 빠지고, 링크 접속은 막힌다. (접속 확인은 작업 12)
+ * 이미 낸 평가는 남아 있지만 집계·분모에서 빠지고, 제외 시각이 있으면 링크 접속은 즉시 막힌다. (접속 확인은 작업 12)
  */
 export async function removeParticipant(meetingId: string, memberId: string): Promise<ChangeResult> {
   const check = await 바꿀_수_있는지(meetingId, memberId);
