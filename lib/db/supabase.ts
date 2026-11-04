@@ -4,6 +4,11 @@ import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import type { Database } from "@/types/database";
+
+// 표 이름·칸 이름을 미리 알고 있는 연결 (오타를 빌드 단계에서 잡아 준다)
+export type DbClient = SupabaseClient<Database>;
+
 // 환경 변수를 읽고, 비어 있으면 무엇이 빠졌는지 한국어로 알려 준다. (값 자체는 절대 출력하지 않는다)
 function readEnv(name: "SUPABASE_URL" | "SUPABASE_ANON_KEY" | "SUPABASE_SERVICE_ROLE_KEY"): string {
   const value = process.env[name];
@@ -14,15 +19,15 @@ function readEnv(name: "SUPABASE_URL" | "SUPABASE_ANON_KEY" | "SUPABASE_SERVICE_
 }
 
 // 서버가 데이터와 파일을 다룰 때 쓰는 관리자용 연결 (비밀 키 사용 — 서버 안에서만)
-export function createAdminClient(): SupabaseClient {
-  return createClient(readEnv("SUPABASE_URL"), readEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+export function createAdminClient(): DbClient {
+  return createClient<Database>(readEnv("SUPABASE_URL"), readEnv("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
 // 담당 팀원·팀장 로그인 처리에 쓰는 일반 연결 (공개 키 사용 — 그래도 브라우저로 보내지 않는다)
-export function createAnonClient(): SupabaseClient {
-  return createClient(readEnv("SUPABASE_URL"), readEnv("SUPABASE_ANON_KEY"), {
+export function createAnonClient(): DbClient {
+  return createClient<Database>(readEnv("SUPABASE_URL"), readEnv("SUPABASE_ANON_KEY"), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
