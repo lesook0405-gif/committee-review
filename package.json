@@ -11,7 +11,8 @@
     "seed": "node --env-file=.env.local scripts/seed.mts",
     "test": "vitest run",
     "check:login": "node --env-file=.env.local scripts/check-login.mts",
-    "check:committees": "node --env-file=.env.local scripts/check-committees.mts"
+    "check:committees": "node --env-file=.env.local scripts/check-committees.mts",
+    "check:members": "node --env-file=.env.local scripts/check-members.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

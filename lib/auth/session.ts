@@ -84,3 +84,17 @@ export async function requireEditor(): Promise<CurrentStaff> {
   if (staff.role !== "staff") throw new NotEditorError();
   return staff;
 }
+
+/**
+ * 서버 처리 첫 줄용: 담당 팀원이면 null, 팀장이면 화면에 보여 줄 거부 문장.
+ * (화면에서 버튼을 숨겨도, 서버에서 다시 막는다. 로그인하지 않았으면 로그인 화면으로 이동)
+ */
+export async function editorDenial(): Promise<string | null> {
+  try {
+    await requireEditor();
+    return null;
+  } catch (error) {
+    if (error instanceof NotEditorError) return error.message;
+    throw error; // redirect(로그인 화면 이동)는 그대로 넘긴다
+  }
+}
