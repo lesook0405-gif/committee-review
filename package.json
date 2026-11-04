@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "check:supabase": "node --env-file=.env.local scripts/check-supabase.mts",
-    "seed": "node --env-file=.env.local scripts/seed.mts"
+    "seed": "node --env-file=.env.local scripts/seed.mts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -24,6 +25,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.12"
   }
 }
