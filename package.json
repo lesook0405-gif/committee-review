@@ -24,7 +24,9 @@
     "check:recusals": "node --env-file=.env.local scripts/check-recusals.mts",
     "check:proxy": "node --env-file=.env.local scripts/check-proxy.mts",
     "check:close": "node --env-file=.env.local scripts/check-close.mts",
-    "check:results": "node --env-file=.env.local scripts/check-results.mts"
+    "check:results": "node --env-file=.env.local scripts/check-results.mts",
+    "check:myscores": "node --env-file=.env.local scripts/check-myscores.mts",
+    "check:permissions": "node --env-file=.env.local scripts/check-permissions.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

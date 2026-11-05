@@ -155,3 +155,27 @@ export async function getProxyScores(agendaId: string, memberId: string): Promis
   if (!data || !data.is_proxy || !Array.isArray(data.scores)) return null;
   return data.scores.filter((v): v is number => typeof v === "number");
 }
+
+// ─────────────────────────────────────────────
+// 위원 "내 점수" 화면 (PLAN 작업 22)
+// ─────────────────────────────────────────────
+
+/**
+ * 내가 낸 평가 전부 (안건 ID → 점수). 위원 ID는 링크 확인으로 얻은 값만 넘긴다.
+ * 이 함수는 member_id가 같은 기록만 읽으므로 다른 위원의 점수는 돌려주지 않는다.
+ */
+export async function listMyEvaluations(memberId: string, agendaIds: readonly string[]): Promise<Map<string, MyEvaluation>> {
+  const map = new Map<string, MyEvaluation>();
+  if (agendaIds.length === 0) return map;
+  const { data, error } = await createAdminClient()
+    .from("evaluations")
+    .select("agenda_id, scores, total, is_proxy, updated_at")
+    .eq("member_id", memberId)
+    .in("agenda_id", agendaIds);
+  if (error) throw new Error(`내 점수를 불러오지 못했습니다. (${error.message})`);
+  for (const e of data ?? []) {
+    const scores = Array.isArray(e.scores) ? e.scores.filter((v): v is number => typeof v === "number") : [];
+    map.set(e.agenda_id, { scores, total: e.total, isProxy: e.is_proxy, updatedAt: e.updated_at });
+  }
+  return map;
+}

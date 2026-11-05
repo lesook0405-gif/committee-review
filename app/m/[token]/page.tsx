@@ -47,9 +47,14 @@ async function MemberHome({ params }: PageProps<"/m/[token]">) {
             : "회의가 시작되었습니다. 안건을 읽고 평가해 주세요."}
       </p>
 
-      <h2 className="mt-6 mb-3 text-lg font-semibold">
-        안건 <span className="text-base font-normal text-muted">{agendas.length}건</span>
-      </h2>
+      <div className="mt-6 mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">
+          안건 <span className="text-base font-normal text-muted">{agendas.length}건</span>
+        </h2>
+        <LinkButton href={`/m/${token}/my`} variant="secondary" prefetch={false}>
+          내 점수 보기
+        </LinkButton>
+      </div>
       {agendas.length === 0 ? (
         <p className="rounded-lg border border-border bg-surface p-5 text-muted">아직 올라온 안건이 없습니다.</p>
       ) : (
