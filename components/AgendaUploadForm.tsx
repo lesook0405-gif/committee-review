@@ -6,7 +6,8 @@
 import { useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/Button";
-import { AGENDA_MAX_BYTES, formatFileSize } from "@/lib/rules/agenda";
+import { pdfFileProblems, putPdf } from "@/components/pdf-upload";
+import { formatFileSize } from "@/lib/rules/agenda";
 
 type Prepare = (input: { title: string; fileName: string; size: number }) => Promise<{ errors: string[]; path?: string; uploadUrl?: string }>;
 type Confirm = (input: { path: string; title: string }) => Promise<{ errors: string[]; saved?: boolean }>;
@@ -42,10 +43,7 @@ export function AgendaUploadForm({ prepare, confirm }: { prepare: Prepare; confi
     // 화면에서 먼저 알려 주는 검사 (서버도 똑같이 다시 검사한다)
     const 문제: string[] = [];
     if (title.trim() === "") 문제.push("안건 제목을 입력해 주세요.");
-    if (!file) 문제.push("PDF 파일을 선택해 주세요.");
-    else if (!file.name.toLowerCase().endsWith(".pdf")) 문제.push("PDF 파일만 올릴 수 있습니다.");
-    else if (file.size > AGENDA_MAX_BYTES) 문제.push("30MB 이하의 PDF만 올릴 수 있습니다. 선택한 파일이 30MB를 넘습니다.");
-    else if (file.size === 0) 문제.push("빈 파일은 올릴 수 없습니다.");
+    문제.push(...pdfFileProblems(file));
     setErrors(문제);
     if (문제.length > 0 || !file) return;
 
@@ -58,14 +56,9 @@ export function AgendaUploadForm({ prepare, confirm }: { prepare: Prepare; confi
       }
 
       setStep("uploading");
-      const 응답 = await fetch(주소.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "content-type": "application/pdf", "x-upsert": "false" },
-      });
-      if (!응답.ok) {
-        // 보관함도 PDF·30MB 제한을 따로 걸어 두었으므로, 여기서 거부되면 대부분 형식·크기 문제다
-        setErrors(["파일을 올리지 못했습니다. PDF 파일이고 30MB 이하인지 확인한 뒤 다시 시도해 주세요."]);
+      const 업로드_문제 = await putPdf(주소.uploadUrl, file);
+      if (업로드_문제) {
+        setErrors([업로드_문제]);
         return;
       }
 

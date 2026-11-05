@@ -349,6 +349,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      replace_agenda_pdf: {
+        Args: {
+          p_agenda_id: string
+          p_meeting_id: string
+          p_new_path: string
+          p_new_size: number
+        }
+        Returns: Json
+      }
       scoring_is_valid: {
         Args: { criteria: Json; pass_score: number }
         Returns: boolean

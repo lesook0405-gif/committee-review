@@ -2,7 +2,7 @@
 //   서버는 "올려도 되는지 확인 → 업로드 주소 발급 → 올린 뒤 다시 확인"만 한다.
 // Design Ref: §7 서버 처리 — 안건 업로드 확인·등록: 마감 전 재확인, 30MB 이하, 앞부분 %PDF, 실패 시 올린 파일 삭제
 // 권한 확인은 이 함수를 부르는 서버 처리(app/admin/meetings/agenda-actions.ts)에서 먼저 한다.
-// 안건 교체(첫 평가 전만, 열람 기록 초기화)는 PLAN 작업 14에서 만든다.
+// 작업 14: 안건 교체(첫 평가 전만, 열람 기록 초기화, 옛 파일 삭제)도 같은 3단계로 한다.
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -78,6 +78,25 @@ export async function prepareAgendaUpload(meetingId: string): Promise<PrepareRes
   return { kind: "ok", path, uploadUrl: data.signedUrl };
 }
 
+/**
+ * 올린 파일을 서버가 직접 확인한다: 보관함에 있는지, 크기 1바이트~30MB인지, 앞부분이 %PDF- 인지.
+ * 통과하면 실제 크기를 돌려준다. (지우는 것은 부르는 쪽에서 결과에 따라 한다)
+ */
+async function 올린_파일_검사(path: string): Promise<{ size: number } | "missing" | "too-large" | "not-pdf"> {
+  const storage = createAdminClient().storage.from(BUCKET);
+  const { data: info, error: infoError } = await storage.info(path);
+  if (infoError || !info) return "missing";
+  const size = Number(info.size);
+  if (!Number.isInteger(size) || size < 1 || size > AGENDA_MAX_BYTES) return "too-large";
+
+  // 파일 전체를 받지 않고 앞 5바이트만 읽어 PDF인지 확인한다
+  const { data: signed, error: signError } = await storage.createSignedUrl(path, 60);
+  if (signError || !signed) return "missing";
+  const head = await fetch(signed.signedUrl, { headers: { range: "bytes=0-4" } });
+  if (!head.ok || !hasPdfHeader(new Uint8Array(await head.arrayBuffer()))) return "not-pdf";
+  return { size };
+}
+
 export type ConfirmResult = "ok" | "not-found" | "closed" | "bad-path" | "missing" | "too-large" | "not-pdf";
 
 /**
@@ -103,16 +122,10 @@ export async function confirmAgendaUpload(meetingId: string, path: string, title
   const { data: 이미 } = await db.from("agendas").select("id").eq("pdf_path", path).maybeSingle();
   if (이미) return "ok";
 
-  const { data: info, error: infoError } = await storage.info(path);
-  if (infoError || !info) return "missing";
-  const size = Number(info.size);
-  if (!Number.isInteger(size) || size < 1 || size > AGENDA_MAX_BYTES) return 지우고("too-large");
-
-  // 파일 전체를 받지 않고 앞 5바이트만 읽어 PDF인지 확인한다
-  const { data: signed, error: signError } = await storage.createSignedUrl(path, 60);
-  if (signError || !signed) return 지우고("missing");
-  const head = await fetch(signed.signedUrl, { headers: { range: "bytes=0-4" } });
-  if (!head.ok || !hasPdfHeader(new Uint8Array(await head.arrayBuffer()))) return 지우고("not-pdf");
+  const 파일 = await 올린_파일_검사(path);
+  if (파일 === "missing") return "missing";
+  if (typeof 파일 === "string") return 지우고(파일);
+  const size = 파일.size;
 
   // 순서 = 지금까지 안건 중 가장 큰 번호 + 1. 동시에 두 건이 들어와 번호가 겹치면 다시 시도한다
   for (let 시도 = 0; 시도 < 3; 시도++) {
@@ -138,4 +151,70 @@ export async function confirmAgendaUpload(meetingId: string, path: string, title
   }
   await storage.remove([path]);
   throw new Error("안건 순서가 겹쳐 저장하지 못했습니다. 다시 시도해 주세요.");
+}
+
+// ─────────────────────────────────────────────
+// 안건 PDF 교체 (PLAN 작업 14)
+// PRD 5번: 그 안건에 첫 평가(제외·제척 위원 기록, 대리 입력 포함)가 제출되기 전까지만 교체. 교체하면 열람 기록 초기화.
+// ─────────────────────────────────────────────
+
+/** 안건별 평가 기록 수 (교체 버튼을 보여 줄지 정할 때 쓴다 — 제외·제척 위원 기록과 대리 입력도 모두 센다) */
+export async function listAgendaEvaluationCounts(agendaIds: readonly string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>(agendaIds.map((id) => [id, 0]));
+  if (agendaIds.length === 0) return counts;
+  const { data, error } = await createAdminClient().from("evaluations").select("agenda_id").in("agenda_id", agendaIds);
+  if (error) throw new Error(`평가 기록을 불러오지 못했습니다. (${error.message})`);
+  for (const e of data ?? []) counts.set(e.agenda_id, (counts.get(e.agenda_id) ?? 0) + 1);
+  return counts;
+}
+
+export type ReplacePrepareResult = PrepareResult | { kind: "evaluated" };
+
+/** ① 교체용 업로드 주소 발급 — 진행 중인 회의의 그 회의 안건이고, 평가 기록이 0건일 때만 */
+export async function prepareAgendaReplace(meetingId: string, agendaId: string): Promise<ReplacePrepareResult> {
+  const agenda = await getMeetingAgenda(meetingId, agendaId);
+  if (!agenda) return { kind: "not-found" };
+  if ((await listAgendaEvaluationCounts([agendaId])).get(agendaId)) return { kind: "evaluated" };
+  return prepareAgendaUpload(meetingId); // 회의 확인·새 저장 위치·주소 발급은 새로 올릴 때와 같다
+}
+
+export type ReplaceResult = ConfirmResult | "evaluated";
+
+/**
+ * ③ 올린 새 파일을 확인한 뒤 교체한다.
+ * 파일 확인(크기·%PDF) → 데이터베이스 함수 replace_agenda_pdf가 "마감 전·평가 0건"을 안건을 잠근 채 다시 확인하고
+ * 파일 위치를 바꾸며 그 안건의 열람 기록을 지운다 → 성공하면 옛 파일을 지운다. 실패하면 새로 올린 파일을 지운다.
+ */
+export async function confirmAgendaReplace(meetingId: string, agendaId: string, path: string): Promise<ReplaceResult> {
+  if (!isAgendaPathOf(meetingId, path)) return "bad-path";
+  const storage = createAdminClient().storage.from(BUCKET);
+  const 지우고 = async (result: ReplaceResult): Promise<ReplaceResult> => {
+    await storage.remove([path]);
+    return result;
+  };
+
+  const agenda = await getMeetingAgenda(meetingId, agendaId);
+  if (!agenda) return 지우고("not-found");
+  if (agenda.pdf_path === path) return "ok"; // 같은 요청이 두 번 왔으면 이미 교체된 상태
+
+  const 파일 = await 올린_파일_검사(path);
+  if (파일 === "missing") return "missing";
+  if (typeof 파일 === "string") return 지우고(파일);
+
+  const { data, error } = await createAdminClient().rpc("replace_agenda_pdf", {
+    p_meeting_id: meetingId,
+    p_agenda_id: agendaId,
+    p_new_path: path,
+    p_new_size: 파일.size,
+  });
+  if (error) {
+    await storage.remove([path]);
+    throw new Error(`안건을 교체하지 못했습니다. (${error.message})`);
+  }
+  const 결과 = data as { result: "ok" | "not-found" | "closed" | "evaluated"; old_path?: string };
+  if (결과.result !== "ok") return 지우고(결과.result);
+
+  // 교체가 끝난 뒤 옛 파일 삭제 (실패해도 위원은 옛 파일 주소를 받을 방법이 없으므로 교체 자체는 그대로 둔다)
+  if (결과.old_path && 결과.old_path !== path) await storage.remove([결과.old_path]);
+  return "ok";
 }

@@ -3,20 +3,22 @@
 // 작업 10: 안건 목록과 안건 PDF 올리기(담당 팀원·마감 전만).
 // 작업 11: 위원 링크 복사·발급·재발급·차단(담당 팀원만, 링크 만료 전까지). 팀장에게는 링크 영역을 보내지 않는다.
 // 작업 13: 안건별 "열람 N / M"·"회의 전 열람 N / M" (M = 그 안건의 평가 대상 수).
-// 제출 현황(작업 20), 안건 교체(작업 14)는 다음 작업에서 이 화면에 붙인다.
+// 작업 14: 평가 기록이 0건인 안건만 [교체] (제외·제척 위원 기록, 대리 입력 포함). 교체하면 열람 기록 초기화.
+// 제출 현황(작업 20)은 다음 작업에서 이 화면에 붙인다.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { ActionButton } from "@/components/ActionButton";
+import { AgendaReplaceButton } from "@/components/AgendaReplaceButton";
 import { AgendaUploadForm } from "@/components/AgendaUploadForm";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { PageContainer } from "@/components/PageContainer";
 import { StartsAtForm } from "@/components/StartsAtForm";
 import { requireStaff } from "@/lib/auth/session";
 import { listAgendaViewCounts } from "@/lib/db/agenda-views";
-import { listAgendas, type AgendaRow } from "@/lib/db/agendas";
+import { listAgendaEvaluationCounts, listAgendas, type AgendaRow } from "@/lib/db/agendas";
 import { getMeeting, listParticipants, type ParticipantRow } from "@/lib/db/meetings";
 import { formatKoreanDateTime } from "@/lib/format";
 import { formatFileSize } from "@/lib/rules/agenda";
@@ -26,7 +28,12 @@ import { isLinkExpired, linkExpiresAt, type LinkState } from "@/lib/rules/member
 import type { ViewCounts } from "@/lib/rules/status";
 
 import { addParticipantAction, removeParticipantAction, updateStartsAtAction } from "../actions";
-import { confirmAgendaUploadAction, prepareAgendaUploadAction } from "../agenda-actions";
+import {
+  confirmAgendaReplaceAction,
+  confirmAgendaUploadAction,
+  prepareAgendaReplaceAction,
+  prepareAgendaUploadAction,
+} from "../agenda-actions";
 import { blockLinkAction, reissueLinkAction, revealLinkAction } from "../link-actions";
 
 export const metadata: Metadata = { title: "회의 상세" };
@@ -49,7 +56,11 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
   if (!meeting) notFound();
 
   const [participants, agendas] = await Promise.all([listParticipants(meeting), listAgendas(meeting.id)]);
-  const viewCounts = await listAgendaViewCounts(meeting.id, meeting.startsAt, agendas.map((a) => a.id));
+  const agendaIds = agendas.map((a) => a.id);
+  const [viewCounts, evaluationCounts] = await Promise.all([
+    listAgendaViewCounts(meeting.id, meeting.startsAt, agendaIds),
+    listAgendaEvaluationCounts(agendaIds),
+  ]);
   const isOpen = meeting.status === "open";
   const isStaff = staff.role === "staff";
   const canEdit = isStaff && isOpen;
@@ -84,7 +95,7 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
         </section>
       ) : null}
 
-      <AgendaSection agendas={agendas} viewCounts={viewCounts} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
+      <AgendaSection agendas={agendas} viewCounts={viewCounts} evaluationCounts={evaluationCounts} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-5">
         <h2 className="mb-1 text-lg font-semibold">
@@ -120,12 +131,15 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
 function AgendaSection({
   agendas,
   viewCounts,
+  evaluationCounts,
   meetingId,
   canEdit,
   role,
 }: {
   agendas: AgendaRow[];
   viewCounts: Map<string, ViewCounts>;
+  /** 안건별 평가 기록 수 — 0건일 때만 [교체] (제외·제척 위원 기록, 대리 입력 포함) */
+  evaluationCounts: Map<string, number>;
   meetingId: string;
   canEdit: boolean;
   role: string;
@@ -152,6 +166,17 @@ function AgendaSection({
                 <ViewCountText label="회의 전 열람" counts={viewCounts.get(a.id)} pick="viewedBeforeStart" />
                 <span className="text-muted">{formatKoreanDateTime(a.uploadedAt)} 올림</span>
               </span>
+              {canEdit ? (
+                (evaluationCounts.get(a.id) ?? 0) === 0 ? (
+                  <AgendaReplaceButton
+                    prepare={prepareAgendaReplaceAction.bind(null, meetingId, a.id)}
+                    confirm={confirmAgendaReplaceAction.bind(null, meetingId, a.id)}
+                    agendaLabel={`${a.position}번 안건`}
+                  />
+                ) : (
+                  <span className="text-sm text-muted">평가 기록이 있어 PDF를 교체할 수 없습니다</span>
+                )
+              ) : null}
             </li>
           ))}
         </ol>
