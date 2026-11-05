@@ -7,7 +7,7 @@
   --pad-x: 92.5;
   --top: 57;
   --logo: 48;
-  --brand: 35.5;
+  --brand: 46;
   --h1: 50;
   --h1-lh: 60;
   --h1-ls: -2;
@@ -15,19 +15,19 @@
   --sub-lh: 28;
   --note-fs: 15.5;
   --note-w: 760;
-  --card-w: 742.4;
+  --card-w: 620;
   --inset-t: 18;
   --inset-r: 18;
   --inset-b: 22.5;
-  --form-w: 559;
-  --form-left: 96.2;
-  --h2: 34;
-  --lead: 19;
-  --label: 17.4;
-  --field: 66;
-  --btn: 66;
-  --foot: 16;
-  --org-w: 92;
+  --form-w: 470;
+  --form-left: 72;
+  --h2: 30;
+  --lead: 16.5;
+  --label: 15.5;
+  --field: 56;
+  --btn: 56;
+  --foot: 14.5;
+  --org-w: 78;
 
   --ink: #000;
   --text2: #5f636b;
@@ -437,7 +437,7 @@
     --pad-x: 24;
     --top: 28;
     --logo: 38;
-    --brand: 25;
+    --brand: 28;
     --h1: 27;
     --h1-lh: 33;
     --h1-ls: -0.9;
@@ -493,7 +493,7 @@
     --pad-x: 28;
     --top: 20;
     --logo: 28;
-    --brand: 20;
+    --brand: 22;
     --h1: 21;
     --h1-lh: 26;
     --h1-ls: -0.7;
