@@ -22,7 +22,8 @@
     "check:evaluations": "node --env-file=.env.local scripts/check-evaluations.mts",
     "check:lock": "node --env-file=.env.local scripts/check-lock.mts",
     "check:recusals": "node --env-file=.env.local scripts/check-recusals.mts",
-    "check:proxy": "node --env-file=.env.local scripts/check-proxy.mts"
+    "check:proxy": "node --env-file=.env.local scripts/check-proxy.mts",
+    "check:close": "node --env-file=.env.local scripts/check-close.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

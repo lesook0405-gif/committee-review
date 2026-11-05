@@ -349,6 +349,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_meeting: { Args: { p_meeting_id: string }; Returns: Json }
       evaluation_total: {
         Args: { p_criteria: Json; p_scores: Json }
         Returns: number

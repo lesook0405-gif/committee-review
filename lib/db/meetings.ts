@@ -188,3 +188,21 @@ export async function removeParticipant(meetingId: string, memberId: string): Pr
   if (error) throw new Error(`참석 위원을 제외하지 못했습니다. (${error.message})`);
   return data.length > 0 ? "ok" : "not-member";
 }
+
+export type CloseResult =
+  | { kind: "ok" }
+  | { kind: "missing"; count: number }
+  | { kind: "not-found" | "closed" | "not-started" | "no-agendas" };
+
+/**
+ * 평가 마감 — 데이터베이스 함수 close_meeting이 회의를 잠근 채로
+ * 이미 마감됐는지·회의가 시작됐는지·안건이 있는지·평가 대상 전원이 제출했는지 확인하고 마감 시각을 남긴다. 되돌릴 수 없다.
+ */
+export async function closeMeeting(meetingId: string): Promise<CloseResult> {
+  const { data, error } = await createAdminClient().rpc("close_meeting", { p_meeting_id: meetingId });
+  if (error) throw new Error(`회의를 마감하지 못했습니다. (${error.message})`);
+  const r = data as { result: string; count?: number };
+  if (r.result === "ok") return { kind: "ok" };
+  if (r.result === "missing") return { kind: "missing", count: r.count ?? 0 };
+  return { kind: r.result as "not-found" | "closed" | "not-started" | "no-agendas" };
+}

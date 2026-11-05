@@ -6,7 +6,7 @@
 // 작업 14: 평가 기록이 0건인 안건만 [교체] (제외·제척 위원 기록, 대리 입력 포함). 교체하면 열람 기록 초기화.
 // 작업 18: 안건별 [제척 관리] — 담당 팀원이 마감 전까지 위원을 제척하고 해제한다. 팀장에게는 제척된 위원 이름만 보인다.
 // 작업 19: 담당 팀원의 [대리 입력·수정] 바로가기 (/admin/meetings/{id}/proxy).
-// 제출 현황(작업 20)은 다음 작업에서 이 화면에 붙인다.
+// 작업 20: 안건별 "제출 N / M", 회의 전체 "미제출 N명", 전원 제출 시에만 눌 수 있는 [평가 마감](담당 팀원만, 되돌릴 수 없음).
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,6 +14,7 @@ import { Suspense } from "react";
 
 import { ActionButton } from "@/components/ActionButton";
 import { LinkButton } from "@/components/Button";
+import { CloseMeetingButton } from "@/components/CloseMeetingButton";
 import { AgendaReplaceButton } from "@/components/AgendaReplaceButton";
 import { AgendaUploadForm } from "@/components/AgendaUploadForm";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
@@ -21,6 +22,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { StartsAtForm } from "@/components/StartsAtForm";
 import { requireStaff } from "@/lib/auth/session";
 import { listAgendaViewCounts } from "@/lib/db/agenda-views";
+import { getSubmissionStatus } from "@/lib/db/submission-status";
 import { listAgendaRecusals } from "@/lib/db/recusals";
 import { listAgendaEvaluationCounts, listAgendas, type AgendaRow } from "@/lib/db/agendas";
 import { getMeeting, listParticipants, type ParticipantRow } from "@/lib/db/meetings";
@@ -29,7 +31,7 @@ import { formatFileSize } from "@/lib/rules/agenda";
 import { isUuid } from "@/lib/rules/ids";
 import { isBeforeStart, isoToKstInput } from "@/lib/rules/meeting";
 import { isLinkExpired, linkExpiresAt, type LinkState } from "@/lib/rules/member-link";
-import type { ViewCounts } from "@/lib/rules/status";
+import type { SubmissionCounts, ViewCounts } from "@/lib/rules/status";
 
 import { addParticipantAction, removeParticipantAction, updateStartsAtAction } from "../actions";
 import {
@@ -39,6 +41,7 @@ import {
   prepareAgendaUploadAction,
 } from "../agenda-actions";
 import { blockLinkAction, reissueLinkAction, revealLinkAction } from "../link-actions";
+import { closeMeetingAction } from "../close-actions";
 import { setRecusalAction } from "../recusal-actions";
 
 export const metadata: Metadata = { title: "회의 상세" };
@@ -62,10 +65,11 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
 
   const [participants, agendas] = await Promise.all([listParticipants(meeting), listAgendas(meeting.id)]);
   const agendaIds = agendas.map((a) => a.id);
-  const [viewCounts, evaluationCounts, recusals] = await Promise.all([
+  const [viewCounts, evaluationCounts, recusals, submissions] = await Promise.all([
     listAgendaViewCounts(meeting.id, meeting.startsAt, agendaIds),
     listAgendaEvaluationCounts(agendaIds),
     listAgendaRecusals(agendaIds),
+    getSubmissionStatus(meeting.id, agendaIds),
   ]);
   const isOpen = meeting.status === "open";
   const isStaff = staff.role === "staff";
@@ -101,19 +105,58 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
         </section>
       ) : null}
 
-      <AgendaSection agendas={agendas} viewCounts={viewCounts} evaluationCounts={evaluationCounts} recusals={recusals} participants={participants.filter((p) => p.state === "participating")} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
+      <AgendaSection agendas={agendas} viewCounts={viewCounts} submissionCounts={submissions.perAgenda} evaluationCounts={evaluationCounts} recusals={recusals} participants={participants.filter((p) => p.state === "participating")} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
 
-      {canEdit ? (
-        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-5">
-          <div>
-            <h2 className="text-lg font-semibold">대리 입력</h2>
-            <p className="text-sm text-muted">위원이 기기 문제로 제출하지 못했다면, 종이로 받은 점수를 대신 입력합니다.</p>
+      <section className="mt-6 rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-2 text-lg font-semibold">제출 현황</h2>
+        {agendas.length === 0 ? (
+          <p className="text-muted">안건이 올라오면 제출 현황이 표시됩니다.</p>
+        ) : submissions.missing.length === 0 ? (
+          <p className="font-semibold text-success">평가 대상 위원이 모든 안건을 제출했습니다.</p>
+        ) : (
+          <p>
+            <strong className="text-lg">미제출 {submissions.missing.length}명</strong>
+            <span className="ml-2 text-muted">{submissions.missing.map((m) => m.name).join(", ")}</span>
+          </p>
+        )}
+        <p className="mt-1 text-sm text-muted">
+          미제출은 평가 대상인 안건 중 한 안건이라도 제출하지 않은 위원 수입니다. 제척된 안건은 세지 않습니다. 대리 입력도 제출로 셉니다.
+        </p>
+
+        {canEdit ? (
+          <div className="mt-4 flex flex-wrap items-start justify-between gap-4 border-t border-border pt-4">
+            <div>
+              <h3 className="font-semibold">대리 입력</h3>
+              <p className="text-sm text-muted">위원이 기기 문제로 제출하지 못했다면, 종이로 받은 점수를 대신 입력합니다.</p>
+              <div className="mt-2">
+                <LinkButton href={`/admin/meetings/${meeting.id}/proxy`} variant="secondary" prefetch={false}>
+                  대리 입력·수정
+                </LinkButton>
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-2 font-semibold">평가 마감</h3>
+              <CloseMeetingButton
+                action={closeMeetingAction.bind(null, meeting.id)}
+                disabledReason={
+                  agendas.length === 0
+                    ? "안건을 올린 뒤에 마감할 수 있습니다."
+                    : isBeforeStart(meeting.startsAt, new Date())
+                      ? "회의가 시작된 뒤에 마감할 수 있습니다."
+                      : submissions.missing.length > 0
+                        ? `평가 대상 위원 전원이 제출해야 마감할 수 있습니다. (미제출 ${submissions.missing.length}명)`
+                        : null
+                }
+              />
+            </div>
           </div>
-          <LinkButton href={`/admin/meetings/${meeting.id}/proxy`} variant="secondary" prefetch={false}>
-            대리 입력·수정
-          </LinkButton>
-        </section>
-      ) : null}
+        ) : null}
+        {!isOpen ? (
+          <p className="mt-4 border-t border-border pt-4 font-semibold">
+            평가가 마감되었습니다{meeting.closedAt ? ` · ${formatKoreanDateTime(meeting.closedAt)}` : ""}. 마감된 회의는 점수를 낼 수도 고칠 수도 없습니다.
+          </p>
+        ) : null}
+      </section>
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-5">
         <h2 className="mb-1 text-lg font-semibold">
@@ -149,6 +192,7 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
 function AgendaSection({
   agendas,
   viewCounts,
+  submissionCounts,
   evaluationCounts,
   recusals,
   participants,
@@ -158,6 +202,8 @@ function AgendaSection({
 }: {
   agendas: AgendaRow[];
   viewCounts: Map<string, ViewCounts>;
+  /** 안건별 제출 N / M */
+  submissionCounts: Map<string, SubmissionCounts>;
   /** 안건별 평가 기록 수 — 0건일 때만 [교체] (제외·제척 위원 기록, 대리 입력 포함) */
   evaluationCounts: Map<string, number>;
   /** 안건별 제척된 위원 ID */
@@ -188,6 +234,7 @@ function AgendaSection({
               <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                 <ViewCountText label="열람" counts={viewCounts.get(a.id)} pick="viewed" />
                 <ViewCountText label="회의 전 열람" counts={viewCounts.get(a.id)} pick="viewedBeforeStart" />
+                <SubmitCountText counts={submissionCounts.get(a.id)} />
                 <span className="text-muted">{formatKoreanDateTime(a.uploadedAt)} 올림</span>
               </span>
               {canEdit ? (
@@ -314,6 +361,17 @@ function LinkButtons({ row, meetingId }: { row: ParticipantRow; meetingId: strin
         <ActionButton action={blockLinkAction.bind(null, meetingId, row.memberId)} label="차단" ariaLabel={`${row.name} 링크 차단`} variant="danger" />
       ) : null}
     </>
+  );
+}
+
+/** "제출 3 / 5" — 화면 읽기 프로그램에는 "제출 5명 중 3명"으로 읽힌다 */
+function SubmitCountText({ counts }: { counts: SubmissionCounts | undefined }) {
+  const n = counts?.submitted ?? 0;
+  const m = counts?.eligible ?? 0;
+  return (
+    <span aria-label={`제출 ${m}명 중 ${n}명`}>
+      <span className="text-muted">제출</span> <strong>{n}</strong> / {m}
+    </span>
   );
 }
 
