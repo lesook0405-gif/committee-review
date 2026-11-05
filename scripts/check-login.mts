@@ -1,6 +1,6 @@
 // Plan 작업 6 — 로그인과 역할 구분 점검 (개발 서버가 켜져 있어야 한다)
 // 실행: npm run check:login   (기본 주소 http://localhost:3001, 다른 주소면 APP_URL=... 로 지정)
-// 샘플 계정 비밀번호와 로그인 쿠키 값은 .env.local에서 읽어 쓰기만 하고 화면에 출력하지 않는다.
+// 내 계정 비밀번호와 로그인 쿠키 값은 .env.local에서 읽어 쓰기만 하고 화면에 출력하지 않는다.
 import { createHmac } from "node:crypto";
 
 import { createClient } from "@supabase/supabase-js";
@@ -33,15 +33,15 @@ const 관리자 = createClient(process.env.SUPABASE_URL as string, process.env.S
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-// 1) 샘플 계정으로 실제 로그인이 되는지, staff 표에 맞는 역할로 등록돼 있는지
+// 1) 내 계정으로 실제 로그인이 되는지, staff 표에 맞는 역할로 등록돼 있는지
 const 계정들 = [
-  { 이름: "담당 팀원", 메일: process.env.SEED_STAFF_EMAIL, 비번: process.env.SEED_STAFF_PASSWORD, 역할: "staff" as const },
-  { 이름: "팀장", 메일: process.env.SEED_LEAD_EMAIL, 비번: process.env.SEED_LEAD_PASSWORD, 역할: "lead" as const },
+  { 이름: "담당 팀원", 메일: process.env.STAFF_EMAIL, 비번: process.env.STAFF_PASSWORD, 역할: "staff" as const },
+  { 이름: "팀장", 메일: process.env.LEAD_EMAIL, 비번: process.env.LEAD_PASSWORD, 역할: "lead" as const },
 ];
 const 계정_ID: Record<string, string> = {};
 for (const 계정 of 계정들) {
   const { data, error } = await 공개.auth.signInWithPassword({ email: 계정.메일 ?? "", password: 계정.비번 ?? "" });
-  결과(!error && !!data.user, `${계정.이름} 샘플 계정 로그인 (비밀번호 확인)`);
+  결과(!error && !!data.user, `${계정.이름} 내 계정 로그인 (비밀번호 확인)`);
   if (!data.user) continue;
   const { data: staff } = await 관리자.from("staff").select("role").eq("id", data.user.id).maybeSingle();
   결과(staff?.role === 계정.역할, `${계정.이름} 역할 등록 (${계정.역할})`);

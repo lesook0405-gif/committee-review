@@ -71,8 +71,10 @@ export async function 양식_보내기(경로: string, 쿠키값: string, 칸들
 type 목록 = { node: Record<string, { exportedName: string; filename: string }> };
 export async function 서버처리_준비(담당_쿠키: string, 아무_회의_경로: string) {
   await 가져오기(아무_회의_경로, 담당_쿠키);
-  const m = JSON.parse(readFileSync(".next/dev/server/server-reference-manifest.json", "utf8")) as 목록;
+  // 개발 서버는 화면을 처음 열 때마다 서버 처리 목록에 항목을 더한다(서버를 다시 켠 직후에는 비어 있다).
+  // 그래서 찾을 때마다 목록 파일을 새로 읽는다. 처리를 부르기 전에 그 처리가 들어 있는 화면을 한 번 열어 두어야 한다.
   return (이름: string, 파일: string) => {
+    const m = JSON.parse(readFileSync(".next/dev/server/server-reference-manifest.json", "utf8")) as 목록;
     const id = Object.entries(m.node).find(([, v]) => v.exportedName === 이름 && v.filename.endsWith(파일))?.[0];
     if (!id) throw new Error(`서버 처리 ${이름}의 ID를 찾지 못했습니다. 개발 서버에서 관련 화면을 한 번 연 뒤 다시 실행하세요.`);
     return id;

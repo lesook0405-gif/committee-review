@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:supabase": "node --env-file=.env.local scripts/check-supabase.mts",
-    "seed": "node --env-file=.env.local scripts/seed.mts",
+    "create-accounts": "node --env-file=.env.local scripts/create-accounts.mts",
     "test": "vitest run",
     "check:login": "node --env-file=.env.local scripts/check-login.mts",
     "check:committees": "node --env-file=.env.local scripts/check-committees.mts",
@@ -26,7 +26,9 @@
     "check:close": "node --env-file=.env.local scripts/check-close.mts",
     "check:results": "node --env-file=.env.local scripts/check-results.mts",
     "check:myscores": "node --env-file=.env.local scripts/check-myscores.mts",
-    "check:permissions": "node --env-file=.env.local scripts/check-permissions.mts"
+    "check:permissions": "node --env-file=.env.local scripts/check-permissions.mts",
+    "check:e2e": "node --env-file=.env.local scripts/check-e2e.mts",
+    "check:deploy": "node --env-file=.env.local scripts/check-deploy.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
