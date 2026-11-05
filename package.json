@@ -16,7 +16,8 @@
     "check:meetings": "node --env-file=.env.local scripts/check-meetings.mts",
     "check:agendas": "node --env-file=.env.local scripts/check-agendas.mts",
     "check:links": "node --env-file=.env.local scripts/check-links.mts",
-    "check:member-view": "node --env-file=.env.local scripts/check-member-view.mts"
+    "check:member-view": "node --env-file=.env.local scripts/check-member-view.mts",
+    "check:views": "node --env-file=.env.local scripts/check-views.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

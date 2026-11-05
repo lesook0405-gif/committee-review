@@ -56,7 +56,7 @@ async function MemberHome({ params }: PageProps<"/m/[token]">) {
               <span className="text-lg font-semibold">
                 {a.position}. {a.title}
               </span>
-              <LinkButton href={`/m/${token}/a/${a.id}`} variant="secondary">
+              <LinkButton href={`/m/${token}/a/${a.id}`} variant="secondary" prefetch={false}>
                 열람
               </LinkButton>
             </li>

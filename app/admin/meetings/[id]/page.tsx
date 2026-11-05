@@ -2,7 +2,8 @@
 // 작업 9: 회의 정보, 일시 수정(시작 전만), 참석 위원 추가·제외·다시 추가.
 // 작업 10: 안건 목록과 안건 PDF 올리기(담당 팀원·마감 전만).
 // 작업 11: 위원 링크 복사·발급·재발급·차단(담당 팀원만, 링크 만료 전까지). 팀장에게는 링크 영역을 보내지 않는다.
-// 열람·제출 현황(작업 13·20), 안건 교체(작업 14)는 다음 작업에서 이 화면에 붙인다.
+// 작업 13: 안건별 "열람 N / M"·"회의 전 열람 N / M" (M = 그 안건의 평가 대상 수).
+// 제출 현황(작업 20), 안건 교체(작업 14)는 다음 작업에서 이 화면에 붙인다.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,6 +15,7 @@ import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { PageContainer } from "@/components/PageContainer";
 import { StartsAtForm } from "@/components/StartsAtForm";
 import { requireStaff } from "@/lib/auth/session";
+import { listAgendaViewCounts } from "@/lib/db/agenda-views";
 import { listAgendas, type AgendaRow } from "@/lib/db/agendas";
 import { getMeeting, listParticipants, type ParticipantRow } from "@/lib/db/meetings";
 import { formatKoreanDateTime } from "@/lib/format";
@@ -21,6 +23,7 @@ import { formatFileSize } from "@/lib/rules/agenda";
 import { isUuid } from "@/lib/rules/ids";
 import { isBeforeStart, isoToKstInput } from "@/lib/rules/meeting";
 import { isLinkExpired, linkExpiresAt, type LinkState } from "@/lib/rules/member-link";
+import type { ViewCounts } from "@/lib/rules/status";
 
 import { addParticipantAction, removeParticipantAction, updateStartsAtAction } from "../actions";
 import { confirmAgendaUploadAction, prepareAgendaUploadAction } from "../agenda-actions";
@@ -46,6 +49,7 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
   if (!meeting) notFound();
 
   const [participants, agendas] = await Promise.all([listParticipants(meeting), listAgendas(meeting.id)]);
+  const viewCounts = await listAgendaViewCounts(meeting.id, meeting.startsAt, agendas.map((a) => a.id));
   const isOpen = meeting.status === "open";
   const isStaff = staff.role === "staff";
   const canEdit = isStaff && isOpen;
@@ -80,7 +84,7 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
         </section>
       ) : null}
 
-      <AgendaSection agendas={agendas} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
+      <AgendaSection agendas={agendas} viewCounts={viewCounts} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-5">
         <h2 className="mb-1 text-lg font-semibold">
@@ -113,7 +117,19 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
   );
 }
 
-function AgendaSection({ agendas, meetingId, canEdit, role }: { agendas: AgendaRow[]; meetingId: string; canEdit: boolean; role: string }) {
+function AgendaSection({
+  agendas,
+  viewCounts,
+  meetingId,
+  canEdit,
+  role,
+}: {
+  agendas: AgendaRow[];
+  viewCounts: Map<string, ViewCounts>;
+  meetingId: string;
+  canEdit: boolean;
+  role: string;
+}) {
   return (
     <section className="mt-6 rounded-lg border border-border bg-surface p-5">
       <h2 className="mb-3 text-lg font-semibold">
@@ -131,7 +147,11 @@ function AgendaSection({ agendas, meetingId, canEdit, role }: { agendas: AgendaR
                 </span>
                 <span className="ml-2 text-sm text-muted">PDF {formatFileSize(a.sizeBytes)}</span>
               </span>
-              <span className="text-sm text-muted">{formatKoreanDateTime(a.uploadedAt)} 올림</span>
+              <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <ViewCountText label="열람" counts={viewCounts.get(a.id)} pick="viewed" />
+                <ViewCountText label="회의 전 열람" counts={viewCounts.get(a.id)} pick="viewedBeforeStart" />
+                <span className="text-muted">{formatKoreanDateTime(a.uploadedAt)} 올림</span>
+              </span>
             </li>
           ))}
         </ol>
@@ -145,6 +165,11 @@ function AgendaSection({ agendas, meetingId, canEdit, role }: { agendas: AgendaR
             confirm={confirmAgendaUploadAction.bind(null, meetingId)}
           />
         </div>
+      ) : null}
+      {agendas.length > 0 ? (
+        <p className="mt-2 text-sm text-muted">
+          M은 그 안건의 평가 대상 수입니다(회의에서 제외된 위원과 제척된 위원은 빼고 셉니다). &quot;회의 전 열람&quot;은 회의 시작 시각 전에 처음 연 위원 수입니다.
+        </p>
       ) : null}
       {role !== "staff" ? <p className="mt-3 text-sm text-muted">팀장 계정은 열람만 할 수 있습니다.</p> : null}
       {role === "staff" && !canEdit ? <p className="mt-3 text-sm text-muted">마감된 회의라 안건을 올릴 수 없습니다.</p> : null}
@@ -232,5 +257,16 @@ function LinkButtons({ row, meetingId }: { row: ParticipantRow; meetingId: strin
         <ActionButton action={blockLinkAction.bind(null, meetingId, row.memberId)} label="차단" ariaLabel={`${row.name} 링크 차단`} variant="danger" />
       ) : null}
     </>
+  );
+}
+
+/** "열람 3 / 5" — 화면 읽기 프로그램에는 "열람 5명 중 3명"으로 읽힌다 */
+function ViewCountText({ label, counts, pick }: { label: string; counts: ViewCounts | undefined; pick: "viewed" | "viewedBeforeStart" }) {
+  const n = counts?.[pick] ?? 0;
+  const m = counts?.eligible ?? 0;
+  return (
+    <span aria-label={`${label} ${m}명 중 ${n}명`}>
+      <span className="text-muted">{label}</span> <strong>{n}</strong> / {m}
+    </span>
   );
 }

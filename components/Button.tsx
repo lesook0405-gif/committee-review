@@ -22,12 +22,12 @@ export function Button({ variant = "primary", className = "", type = "button", .
   return <button type={type} className={`${공통} ${모양[variant]} ${className}`} {...props} />;
 }
 
-type LinkButtonProps = { href: string; variant?: Variant; className?: string; children: ReactNode };
+type LinkButtonProps = { href: string; variant?: Variant; className?: string; children: ReactNode; prefetch?: boolean };
 
 /** 버튼처럼 보이는 링크 (다른 화면으로 이동) */
-export function LinkButton({ href, variant = "primary", className = "", children }: LinkButtonProps) {
+export function LinkButton({ href, variant = "primary", className = "", children, prefetch }: LinkButtonProps) {
   return (
-    <Link href={href} className={`${공통} ${모양[variant]} ${className}`}>
+    <Link href={href} prefetch={prefetch} className={`${공통} ${모양[variant]} ${className}`}>
       {children}
     </Link>
   );

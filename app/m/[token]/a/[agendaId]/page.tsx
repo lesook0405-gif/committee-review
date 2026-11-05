@@ -1,15 +1,18 @@
 // Design Ref: §3.2 ⑦ 위원: 안건 열람 (/m/{링크값}/a/{안건}) — 화면 대부분을 PDF가 차지한다.
 // Design Ref: §7 — "링크 유효, 이 회의의 안건" 확인 뒤 5분만 유효한 임시 주소로 연다. 보관함은 비공개라 이 주소 없이는 열리지 않는다.
-// 첫 열람 시각 기록은 PLAN 작업 13, 아래 [평가하기]는 작업 15에서 붙인다.
+// 작업 13: 화면이 브라우저에 열린 순간 첫 열람 시각을 기록한다(RecordView). 아래 [평가하기]는 작업 15에서 붙인다.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { LinkDenied, MemberShell } from "@/components/MemberShell";
 import { PageContainer } from "@/components/PageContainer";
+import { RecordView } from "@/components/RecordView";
 import { resolveMemberLink } from "@/lib/auth/member-link";
 import { createAgendaViewUrl, getMeetingAgenda } from "@/lib/db/agendas";
 import { isUuid } from "@/lib/rules/ids";
+
+import { recordViewAction } from "../../actions";
 
 export const metadata: Metadata = { title: "안건 열람" };
 
@@ -44,6 +47,7 @@ async function AgendaView({ params }: PageProps<"/m/[token]/a/[agendaId]">) {
 
   return (
     <MemberShell token={token} meetingTitle={meeting.title} memberName={memberName}>
+      <RecordView record={recordViewAction.bind(null, token, agenda.id)} />
       <BackLink token={token} />
       <h1 className="mt-2 text-xl font-bold">
         {agenda.position}. {agenda.title}
