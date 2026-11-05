@@ -362,6 +362,15 @@ export type Database = {
         Args: { criteria: Json; pass_score: number }
         Returns: boolean
       }
+      submit_evaluation: {
+        Args: {
+          p_agenda_id: string
+          p_meeting_id: string
+          p_member_id: string
+          p_scores: Json
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

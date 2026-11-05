@@ -13,7 +13,7 @@ export type MemberAccess = {
   meetingMemberId: string;
   memberId: string;
   memberName: string;
-  meeting: { id: string; title: string; startsAt: string; status: "open" | "closed"; closedAt: string | null; committeeName: string };
+  meeting: { id: string; title: string; startsAt: string; status: "open" | "closed"; closedAt: string | null; committeeId: string; committeeName: string };
 };
 
 /** 링크로 들어올 수 없는 이유 — 없는 값·재발급 전 값 / 차단 / 회의에서 제외 / 마감 7일 지남 */
@@ -28,7 +28,7 @@ export async function resolveMemberLink(token: string): Promise<LinkCheck> {
 
   const { data, error } = await createAdminClient()
     .from("meeting_members")
-    .select("id, member_id, blocked_at, removed_at, members(name), meetings(id, title, starts_at, status, closed_at, committees(name))")
+    .select("id, member_id, blocked_at, removed_at, members(name), meetings(id, committee_id, title, starts_at, status, closed_at, committees(name))")
     .eq("link_fingerprint", linkFingerprint(token, memberLinkSecret()))
     .maybeSingle();
   if (error) throw new Error(`링크를 확인하지 못했습니다. (${error.message})`);
@@ -51,6 +51,7 @@ export async function resolveMemberLink(token: string): Promise<LinkCheck> {
         startsAt: m.starts_at,
         status: m.status === "closed" ? "closed" : "open",
         closedAt: m.closed_at,
+        committeeId: m.committee_id,
         committeeName: m.committees?.name ?? "",
       },
     },

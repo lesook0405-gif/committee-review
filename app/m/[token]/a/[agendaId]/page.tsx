@@ -1,6 +1,7 @@
 // Design Ref: §3.2 ⑦ 위원: 안건 열람 (/m/{링크값}/a/{안건}) — 화면 대부분을 PDF가 차지한다.
 // Design Ref: §7 — "링크 유효, 이 회의의 안건" 확인 뒤 5분만 유효한 임시 주소로 연다. 보관함은 비공개라 이 주소 없이는 열리지 않는다.
-// 작업 13: 화면이 브라우저에 열린 순간 첫 열람 시각을 기록한다(RecordView). 아래 [평가하기]는 작업 15에서 붙인다.
+// 작업 13: 화면이 브라우저에 열린 순간 첫 열람 시각을 기록한다(RecordView).
+// 작업 15: 아래 [평가하기] — 회의 시작 후·마감 전에만 누를 수 있고, 그 전에는 안내만 보인다.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -10,6 +11,9 @@ import { PageContainer } from "@/components/PageContainer";
 import { RecordView } from "@/components/RecordView";
 import { resolveMemberLink } from "@/lib/auth/member-link";
 import { createAgendaViewUrl, getMeetingAgenda } from "@/lib/db/agendas";
+import { LinkButton } from "@/components/Button";
+import { formatKoreanDateTime } from "@/lib/format";
+import { evaluationWindow } from "@/lib/rules/evaluation";
 import { isUuid } from "@/lib/rules/ids";
 
 import { recordViewAction } from "../../actions";
@@ -44,6 +48,7 @@ async function AgendaView({ params }: PageProps<"/m/[token]/a/[agendaId]">) {
   }
 
   const pdfUrl = await createAgendaViewUrl(agenda.pdf_path);
+  const 시점 = evaluationWindow(meeting, new Date());
 
   return (
     <MemberShell token={token} meetingTitle={meeting.title} memberName={memberName}>
@@ -58,6 +63,19 @@ async function AgendaView({ params }: PageProps<"/m/[token]/a/[agendaId]">) {
         referrerPolicy="no-referrer"
         className="mt-3 h-[75vh] w-full rounded-lg border border-border bg-surface"
       />
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-4">
+        {시점 === "open" ? (
+          <LinkButton href={`/m/${token}/a/${agenda.id}/evaluate`} prefetch={false}>
+            평가하기
+          </LinkButton>
+        ) : (
+          <span className="text-base text-muted">
+            {시점 === "closed"
+              ? "평가가 마감되었습니다."
+              : `회의가 시작된 뒤에 평가할 수 있습니다. (회의 시작: ${formatKoreanDateTime(meeting.startsAt)} 한국 시간)`}
+          </span>
+        )}
+      </div>
       <p className="mt-3 text-sm text-muted">
         PDF가 보이지 않으면{" "}
         <a href={pdfUrl} target="_blank" rel="noreferrer noopener" className="font-semibold text-primary hover:underline">
