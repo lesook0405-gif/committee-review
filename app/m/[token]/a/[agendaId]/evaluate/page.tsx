@@ -14,6 +14,7 @@ import { getCommittee } from "@/lib/db/committees";
 import { getMyEvaluation, listMyAgendaStates } from "@/lib/db/evaluations";
 import { formatKoreanDateTime } from "@/lib/format";
 import { evaluationWindow } from "@/lib/rules/evaluation";
+import { draftStorageKey } from "@/lib/rules/evaluation-draft";
 import { isUuid } from "@/lib/rules/ids";
 
 import { submitEvaluationAction } from "./actions";
@@ -32,7 +33,7 @@ async function Evaluate({ params }: PageProps<"/m/[token]/a/[agendaId]/evaluate"
   const { token, agendaId } = await params;
   const check = await resolveMemberLink(token);
   if (!check.ok) return <LinkDenied reason={check.reason} />;
-  const { meeting, memberId, memberName } = check.access;
+  const { meeting, meetingMemberId, memberId, memberName } = check.access;
 
   const agenda = isUuid(agendaId) ? await getMeetingAgenda(meeting.id, agendaId) : null;
   const shell = (children: React.ReactNode) => (
@@ -110,6 +111,7 @@ async function Evaluate({ params }: PageProps<"/m/[token]/a/[agendaId]/evaluate"
           action={submitEvaluationAction.bind(null, token, agenda.id)}
           criteria={committee.criteria}
           initialScores={mine ? mine.scores : null}
+          draftKey={draftStorageKey(meetingMemberId, agenda.id)}
         />
       </div>
     </>,
