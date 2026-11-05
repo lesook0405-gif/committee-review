@@ -20,7 +20,8 @@
     "check:views": "node --env-file=.env.local scripts/check-views.mts",
     "check:replace": "node --env-file=.env.local scripts/check-replace.mts",
     "check:evaluations": "node --env-file=.env.local scripts/check-evaluations.mts",
-    "check:lock": "node --env-file=.env.local scripts/check-lock.mts"
+    "check:lock": "node --env-file=.env.local scripts/check-lock.mts",
+    "check:recusals": "node --env-file=.env.local scripts/check-recusals.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

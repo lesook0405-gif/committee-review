@@ -4,6 +4,7 @@
 // 작업 11: 위원 링크 복사·발급·재발급·차단(담당 팀원만, 링크 만료 전까지). 팀장에게는 링크 영역을 보내지 않는다.
 // 작업 13: 안건별 "열람 N / M"·"회의 전 열람 N / M" (M = 그 안건의 평가 대상 수).
 // 작업 14: 평가 기록이 0건인 안건만 [교체] (제외·제척 위원 기록, 대리 입력 포함). 교체하면 열람 기록 초기화.
+// 작업 18: 안건별 [제척 관리] — 담당 팀원이 마감 전까지 위원을 제척하고 해제한다. 팀장에게는 제척된 위원 이름만 보인다.
 // 제출 현황(작업 20)은 다음 작업에서 이 화면에 붙인다.
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -18,6 +19,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { StartsAtForm } from "@/components/StartsAtForm";
 import { requireStaff } from "@/lib/auth/session";
 import { listAgendaViewCounts } from "@/lib/db/agenda-views";
+import { listAgendaRecusals } from "@/lib/db/recusals";
 import { listAgendaEvaluationCounts, listAgendas, type AgendaRow } from "@/lib/db/agendas";
 import { getMeeting, listParticipants, type ParticipantRow } from "@/lib/db/meetings";
 import { formatKoreanDateTime } from "@/lib/format";
@@ -35,6 +37,7 @@ import {
   prepareAgendaUploadAction,
 } from "../agenda-actions";
 import { blockLinkAction, reissueLinkAction, revealLinkAction } from "../link-actions";
+import { setRecusalAction } from "../recusal-actions";
 
 export const metadata: Metadata = { title: "회의 상세" };
 
@@ -57,9 +60,10 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
 
   const [participants, agendas] = await Promise.all([listParticipants(meeting), listAgendas(meeting.id)]);
   const agendaIds = agendas.map((a) => a.id);
-  const [viewCounts, evaluationCounts] = await Promise.all([
+  const [viewCounts, evaluationCounts, recusals] = await Promise.all([
     listAgendaViewCounts(meeting.id, meeting.startsAt, agendaIds),
     listAgendaEvaluationCounts(agendaIds),
+    listAgendaRecusals(agendaIds),
   ]);
   const isOpen = meeting.status === "open";
   const isStaff = staff.role === "staff";
@@ -95,7 +99,7 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
         </section>
       ) : null}
 
-      <AgendaSection agendas={agendas} viewCounts={viewCounts} evaluationCounts={evaluationCounts} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
+      <AgendaSection agendas={agendas} viewCounts={viewCounts} evaluationCounts={evaluationCounts} recusals={recusals} participants={participants.filter((p) => p.state === "participating")} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-5">
         <h2 className="mb-1 text-lg font-semibold">
@@ -132,6 +136,8 @@ function AgendaSection({
   agendas,
   viewCounts,
   evaluationCounts,
+  recusals,
+  participants,
   meetingId,
   canEdit,
   role,
@@ -140,6 +146,10 @@ function AgendaSection({
   viewCounts: Map<string, ViewCounts>;
   /** 안건별 평가 기록 수 — 0건일 때만 [교체] (제외·제척 위원 기록, 대리 입력 포함) */
   evaluationCounts: Map<string, number>;
+  /** 안건별 제척된 위원 ID */
+  recusals: Map<string, Set<string>>;
+  /** 이 회의에 참석 중인 위원 (제척 대상 후보) */
+  participants: ParticipantRow[];
   meetingId: string;
   canEdit: boolean;
   role: string;
@@ -177,6 +187,14 @@ function AgendaSection({
                   <span className="text-sm text-muted">평가 기록이 있어 PDF를 교체할 수 없습니다</span>
                 )
               ) : null}
+              <RecusalPanel
+                agenda={a}
+                meetingId={meetingId}
+                participants={participants}
+                recusedIds={recusals.get(a.id) ?? new Set()}
+                evaluated={evaluationCounts.get(a.id) ?? 0}
+                canEdit={canEdit}
+              />
             </li>
           ))}
         </ol>
@@ -293,5 +311,62 @@ function ViewCountText({ label, counts, pick }: { label: string; counts: ViewCou
     <span aria-label={`${label} ${m}명 중 ${n}명`}>
       <span className="text-muted">{label}</span> <strong>{n}</strong> / {m}
     </span>
+  );
+}
+
+/** 안건 하나의 제척 관리: 제척된 위원 안내와, 담당 팀원에게는 위원별 [제척]/[제척 해제] 버튼 */
+function RecusalPanel({
+  agenda,
+  meetingId,
+  participants,
+  recusedIds,
+  evaluated,
+  canEdit,
+}: {
+  agenda: AgendaRow;
+  meetingId: string;
+  participants: ParticipantRow[];
+  recusedIds: Set<string>;
+  evaluated: number;
+  canEdit: boolean;
+}) {
+  const 제척됨 = participants.filter((p) => recusedIds.has(p.memberId));
+  // 참석에서 빠진 뒤에도 남아 있는 제척 기록은 이름을 알 수 없어 건수에서만 뺀다 (평가 대상이 아니므로 숫자에 영향 없음)
+  if (!canEdit && 제척됨.length === 0) return null;
+  return (
+    <details className="w-full rounded-md border border-border bg-background px-3 py-2">
+      <summary className="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 font-semibold">
+        {canEdit ? "제척 관리" : "제척"}
+        <span className="text-sm font-normal text-muted">
+          {제척됨.length === 0 ? "제척된 위원 없음" : `제척 ${제척됨.length}명: ${제척됨.map((p) => p.name).join(", ")}`}
+        </span>
+      </summary>
+      {canEdit ? (
+        <div className="pt-2">
+          <p className="mb-2 text-sm text-muted">
+            제척한 위원은 이 안건의 평가 대상에서 빠집니다(열람·제출 숫자의 분모도 줄어듭니다). 마감 전까지 해제할 수 있습니다.
+            {evaluated > 0 ? " 이미 낸 평가는 지워지지 않고 집계에서만 빠지며, 해제하면 다시 반영됩니다." : ""}
+          </p>
+          <ul className="divide-y divide-border">
+            {participants.map((p) => {
+              const 제척 = recusedIds.has(p.memberId);
+              return (
+                <li key={p.memberId} className="flex min-h-11 flex-wrap items-center justify-between gap-2 py-1">
+                  <span>
+                    {p.name} {제척 ? <span className="ml-1 text-sm font-semibold text-danger">제척됨</span> : null}
+                  </span>
+                  <ActionButton
+                    action={setRecusalAction.bind(null, meetingId, agenda.id, p.memberId, !제척)}
+                    label={제척 ? "제척 해제" : "제척"}
+                    ariaLabel={`${agenda.position}번 안건 ${p.name} ${제척 ? "제척 해제" : "제척"}`}
+                    variant={제척 ? "secondary" : "danger"}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </details>
   );
 }
