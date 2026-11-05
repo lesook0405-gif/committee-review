@@ -18,10 +18,7 @@ export function LoginHero({ children }: { children: ReactNode }) {
         <section className="lh-hero">
           <div className="lh-topbar">
             <div className="lh-brand">
-              <div className="lh-logo" aria-hidden="true">
-                <span>심</span>
-              </div>
-              <span className="lh-brandName">심사위원회 운영 서비스</span>
+              <span className="lh-brandName">기업본부 심사위원회</span>
             </div>
             {/* 작은 화면(세로·가로 휴대폰)에서만 보이는 맨 위 줄 오른쪽 로고 */}
             <div className="lh-org">
@@ -35,16 +32,40 @@ export function LoginHero({ children }: { children: ReactNode }) {
               <span className="lh-line"><span>평가·집계까지,</span></span>
               <span className="lh-line"><span>종이 없이.</span></span>
             </h1>
-            <p className="lh-subline">
-              퀵 발송도, 종이 출력도, 손 계산도 이제 필요 없습니다.
-              <br />
-              담당 팀원은 등록하고, 위원은 링크 하나로 읽고 평가합니다.
-            </p>
-
             <aside className="lh-members" aria-label="위원 안내">
-              <p className="lh-membersTitle">위원이신가요?</p>
-              <p>로그인은 필요 없습니다. 담당 팀원이 메일이나 문자로 보낸 개인 링크를 눌러 들어오세요.</p>
-              <p>링크는 위원님 전용이며 평가 마감 7일 뒤 만료됩니다. 링크가 열리지 않으면 담당 팀원에게 다시 발급을 요청해 주세요.</p>
+              <div className="lh-membersHead">
+                <span className="lh-membersIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1" />
+                    <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" />
+                  </svg>
+                </span>
+                <p className="lh-membersTitle">위원이신가요?</p>
+                <span className="lh-membersBadge">로그인 필요 없음</span>
+              </div>
+              <ol className="lh-steps">
+                <li>
+                  <span className="lh-stepNo">1</span>
+                  <div>
+                    <strong>개인 링크로 바로 접속</strong>
+                    <span className="lh-stepText">담당 팀원이 메일이나 문자로 보낸 링크를 눌러 들어오세요.</span>
+                  </div>
+                </li>
+                <li>
+                  <span className="lh-stepNo">2</span>
+                  <div>
+                    <strong>위원님 전용 링크</strong>
+                    <span className="lh-stepText">다른 분께 전달하지 마세요. 평가 마감 7일 뒤 만료됩니다.</span>
+                  </div>
+                </li>
+                <li>
+                  <span className="lh-stepNo">3</span>
+                  <div>
+                    <strong>링크가 열리지 않나요?</strong>
+                    <span className="lh-stepText">담당 팀원에게 다시 발급을 요청해 주세요.</span>
+                  </div>
+                </li>
+              </ol>
             </aside>
           </div>
         </section>
@@ -54,7 +75,7 @@ export function LoginHero({ children }: { children: ReactNode }) {
             {/* 넓은 화면에서는 카드의 오른쪽 위 모서리가 페이지의 상단 우측이다 */}
             <Image src="/kamco-logo.png" alt="캠코(한국자산관리공사)" width={2000} height={1279} priority className="lh-orgCard" />
             <div className="lh-formWrap">
-              <h2 className="lh-title">다시 오셨네요</h2>
+              <h2 className="lh-title">위원회 관리를 시작합니다</h2>
               <p className="lh-lead">미리 등록된 계정으로 로그인해 위원회와 회의를 관리하세요.</p>
               {children}
               <p className="lh-foot">

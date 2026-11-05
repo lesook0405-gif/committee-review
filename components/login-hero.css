@@ -8,20 +8,20 @@
   --top: 57;
   --logo: 48;
   --brand: 35.5;
-  --h1: 60;
-  --h1-lh: 68;
-  --h1-ls: -2.4;
+  --h1: 50;
+  --h1-lh: 60;
+  --h1-ls: -2;
   --sub: 20;
   --sub-lh: 28;
-  --note-fs: 16.5;
-  --note-w: 700;
+  --note-fs: 15.5;
+  --note-w: 760;
   --card-w: 742.4;
   --inset-t: 18;
   --inset-r: 18;
   --inset-b: 22.5;
   --form-w: 559;
   --form-left: 96.2;
-  --h2: 46;
+  --h2: 34;
   --lead: 19;
   --label: 17.4;
   --field: 66;
@@ -128,24 +128,6 @@
   align-items: center;
   gap: calc(14 * var(--u));
 }
-.lh-logo {
-  display: grid;
-  place-items: center;
-  width: calc(var(--logo) * var(--u));
-  height: calc(var(--logo) * var(--u));
-  border-radius: calc(12 * var(--u));
-  background: #000;
-  font-size: calc(var(--logo) * 0.58 * var(--u));
-  font-weight: 800;
-  line-height: 1;
-  background-image: none;
-}
-.lh-logo span {
-  background: linear-gradient(135deg, #ffc233, #f58a07);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
 .lh-brandName {
   font-size: calc(var(--brand) * var(--u));
   font-weight: 680;
@@ -172,41 +154,97 @@
 .lh-line > span {
   display: block;
 }
-.lh-subline {
-  margin: calc(19 * var(--u)) 0 0;
-  max-width: calc(780 * var(--u));
-  font-size: calc(var(--sub) * var(--u));
-  line-height: calc(var(--sub-lh) * var(--u));
-  font-weight: 460;
-  text-shadow: 0 1px 14px rgb(0 0 0 / 0.4);
-}
 
-/* 위원 안내 — 화면 아래쪽 */
+/* 위원 안내 — 화면 아래쪽. 유리 느낌의 카드에 제목과 세 단계를 나란히 보여 준다 */
 .lh-members {
   margin-top: calc(34 * var(--u));
   max-width: calc(var(--note-w) * var(--u));
-  padding: calc(18 * var(--u)) calc(22 * var(--u));
-  border: 1px solid rgb(255 255 255 / 0.22);
-  border-radius: calc(14 * var(--u));
-  background: rgb(20 10 0 / 0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  padding: calc(20 * var(--u)) calc(24 * var(--u)) calc(22 * var(--u));
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-top-color: rgb(255 255 255 / 0.5);
+  border-radius: calc(18 * var(--u));
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.07));
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.28), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
   font-size: calc(var(--note-fs) * var(--u));
-  line-height: 1.55;
+}
+.lh-membersHead {
+  display: flex;
+  align-items: center;
+  gap: calc(12 * var(--u));
+  margin-bottom: calc(16 * var(--u));
+}
+.lh-membersIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(36 * var(--u));
+  height: calc(36 * var(--u));
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffc233, #f58a07);
+  color: #2a1700;
+  box-shadow: 0 4px 14px rgb(245 154 8 / 0.45);
+}
+.lh-membersIcon svg {
+  width: 56%;
+  height: 56%;
 }
 .lh-membersTitle {
-  margin: 0 0 calc(4 * var(--u));
-  color: var(--amber-soft);
-  font-size: 1.06em;
-  font-weight: 700;
-}
-.lh-members p {
   margin: 0;
-  font-weight: 450;
+  font-size: 1.22em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
-.lh-members p + p {
-  margin-top: calc(4 * var(--u));
-  color: rgb(255 255 255 / 0.82);
+.lh-membersBadge {
+  margin-left: auto;
+  padding: 0.28em 0.85em;
+  border: 1px solid rgb(251 174 5 / 0.55);
+  border-radius: 999px;
+  background: rgb(251 174 5 / 0.16);
+  color: #ffd27a;
+  font-size: 0.86em;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.lh-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: calc(14 * var(--u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lh-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8 * var(--u));
+  padding: calc(14 * var(--u)) calc(16 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: rgb(0 0 0 / 0.2);
+  line-height: 1.5;
+}
+.lh-stepNo {
+  display: grid;
+  place-items: center;
+  width: 1.7em;
+  height: 1.7em;
+  border-radius: 50%;
+  background: rgb(251 174 5 / 0.2);
+  color: #ffc233;
+  font-size: 0.86em;
+  font-weight: 800;
+}
+.lh-steps strong {
+  display: block;
+  margin-bottom: 0.1em;
+  font-weight: 650;
+}
+.lh-steps span.lh-stepText {
+  color: rgb(255 255 255 / 0.8);
+  font-size: 0.93em;
 }
 
 /* ── 로그인 카드 ── */
@@ -379,7 +417,6 @@
 .lh-line:nth-child(1) > span { animation-delay: 0.25s; }
 .lh-line:nth-child(2) > span { animation-delay: 0.38s; }
 .lh-line:nth-child(3) > span { animation-delay: 0.51s; }
-.lh-subline { animation: rise 0.7s 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .lh-members { animation: rise 0.7s 0.95s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .lh-title { animation: rise 0.6s 0.45s backwards; }
 .lh-lead { animation: rise 0.6s 0.52s backwards; }
@@ -389,7 +426,7 @@
 .lh-foot { animation: rise 0.6s 0.9s backwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lh-topbar, .lh-card, .lh-line > span, .lh-subline, .lh-members, .lh-title, .lh-lead, .lh-fieldBox, .lh-submit, .lh-foot { animation: none; }
+  .lh-topbar, .lh-card, .lh-line > span, .lh-members, .lh-title, .lh-lead, .lh-fieldBox, .lh-submit, .lh-foot { animation: none; }
   .lh-video { display: none; }
 }
 
@@ -401,9 +438,9 @@
     --top: 28;
     --logo: 38;
     --brand: 25;
-    --h1: 31;
-    --h1-lh: 37;
-    --h1-ls: -1.1;
+    --h1: 27;
+    --h1-lh: 33;
+    --h1-ls: -0.9;
     --sub: 14;
     --sub-lh: 20;
     --note-fs: 13;
@@ -414,7 +451,7 @@
     --inset-b: 12;
     --form-w: 9999;
     --form-left: 22;
-    --h2: 28;
+    --h2: 24;
     --lead: 14;
     --label: 14;
     --field: 54;
@@ -441,13 +478,12 @@
   .lh-members {
     margin-top: calc(18 * var(--u));
   }
+  .lh-steps { grid-template-columns: 1fr; gap: calc(8 * var(--u)); }
+  .lh-steps li { flex-direction: row; align-items: flex-start; gap: calc(12 * var(--u)); padding: calc(10 * var(--u)) calc(14 * var(--u)); }
+  .lh-membersHead { margin-bottom: calc(12 * var(--u)); }
   .lh-lead { margin-bottom: calc(22 * var(--u)); }
   .lh-fieldBox { margin-bottom: calc(14 * var(--u)); }
   .lh-line { white-space: normal; }
-}
-/* 키가 작은 화면(세로)에서는 부제목을 줄인다 */
-@media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
-  .lh-subline { display: none; }
 }
 
 /* ── 가로로 든 휴대폰: 좌우로 나란히 (700×390 기준) ── */
@@ -458,9 +494,9 @@
     --top: 20;
     --logo: 28;
     --brand: 20;
-    --h1: 24;
-    --h1-lh: 29;
-    --h1-ls: -0.8;
+    --h1: 21;
+    --h1-lh: 26;
+    --h1-ls: -0.7;
     --sub: 11;
     --sub-lh: 15;
     --note-fs: 10.5;
@@ -471,7 +507,7 @@
     --inset-b: 10;
     --form-w: 9999;
     --form-left: 22;
-    --h2: 22;
+    --h2: 19;
     --lead: 11;
     --label: 11.5;
     --field: 36;
@@ -485,9 +521,12 @@
   .lh-hero { padding: calc(var(--top) * var(--u)) calc(16 * var(--u)) calc(14 * var(--u)) calc(var(--pad-x) * var(--u)); min-height: 0; }
   .lh-panel { flex: 0 0 calc(var(--card-w) * var(--u)); padding: calc(var(--inset-t) * var(--u)) calc(var(--inset-r) * var(--u)) calc(var(--inset-b) * var(--u)) 0; }
   .lh-card { padding: calc(12 * var(--u)) calc(var(--form-left) * var(--u)); }
-  .lh-subline { display: none; }
   .lh-lead { margin: calc(6 * var(--u)) 0 calc(12 * var(--u)); }
   .lh-fieldBox { margin-bottom: calc(10 * var(--u)); }
   .lh-foot { margin-top: calc(12 * var(--u)); padding-top: calc(10 * var(--u)); }
   .lh-members { margin-top: calc(12 * var(--u)); padding: calc(10 * var(--u)) calc(12 * var(--u)); }
+  .lh-steps { grid-template-columns: 1fr; gap: calc(5 * var(--u)); }
+  .lh-steps li { flex-direction: row; gap: calc(8 * var(--u)); padding: calc(6 * var(--u)) calc(8 * var(--u)); }
+  .lh-membersHead { margin-bottom: calc(8 * var(--u)); }
+  .lh-membersBadge { display: none; }
 }
