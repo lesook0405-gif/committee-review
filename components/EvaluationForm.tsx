@@ -4,6 +4,7 @@
 // 서버도 같은 규칙으로 다시 검사한다.
 // 작업 17: 입력하는 대로 이 기기(브라우저)에 임시 저장하고, 화면을 닫았다 다시 열면 이어서 입력한다. 제출하면 임시 저장을 지운다.
 //   임시 저장은 서버로 보내지 않으며, 제출해야 담당자에게 전달된다. (저장 규칙은 lib/rules/evaluation-draft.ts)
+// 작업 19: 담당 팀원의 대리 입력 화면도 같은 입력칸을 쓴다(mode="proxy"). 대리 입력에서는 임시 저장을 쓰지 않고 안내 문구만 다르다.
 import { useActionState, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/Button";
@@ -17,8 +18,10 @@ type EvaluationFormProps = {
   criteria: Criterion[];
   /** 이미 낸 점수 (고치기) — 없으면 빈칸으로 시작 */
   initialScores: number[] | null;
-  /** 임시 저장 보관 이름 (위원·안건별, 링크값은 들어 있지 않음) */
-  draftKey: string;
+  /** 임시 저장 보관 이름 (위원·안건별, 링크값은 들어 있지 않음). 대리 입력에서는 null (임시 저장 안 함) */
+  draftKey: string | null;
+  /** member = 위원 본인 제출·수정, proxy = 담당 팀원의 대리 입력·수정 */
+  mode?: "member" | "proxy";
 };
 
 // 브라우저 저장소는 막혀 있을 수 있다(사생활 보호 모드, 저장소 차단 등). 실패해도 입력과 제출은 그대로 되어야 한다.
@@ -49,7 +52,9 @@ export function EvaluationForm(props: EvaluationFormProps) {
   const raw = useSyncExternalStore(
     subscribeNothing,
     () => {
-      if (!holder.current || holder.current.key !== props.draftKey) holder.current = { key: props.draftKey, raw: readStored(props.draftKey) };
+      if (props.draftKey === null) return null;
+      const key = props.draftKey;
+      if (!holder.current || holder.current.key !== key) holder.current = { key, raw: readStored(key) };
       return holder.current.raw;
     },
     () => null,
@@ -58,7 +63,8 @@ export function EvaluationForm(props: EvaluationFormProps) {
   return <EvaluationFields key={draftTexts ? "restored" : "fresh"} {...props} restoredTexts={draftTexts} />;
 }
 
-function EvaluationFields({ action, criteria, initialScores, draftKey, restoredTexts }: EvaluationFormProps & { restoredTexts: string[] | null }) {
+function EvaluationFields({ action, criteria, initialScores, draftKey, mode = "member", restoredTexts }: EvaluationFormProps & { restoredTexts: string[] | null }) {
+  const proxy = mode === "proxy";
   const [state, formAction, pending] = useActionState(action, { errors: [] });
   const serverTexts = criteria.map((_, i) => (initialScores?.[i] !== undefined ? String(initialScores[i]) : ""));
   const [texts, setTexts] = useState<string[]>(restoredTexts ?? serverTexts);
@@ -75,6 +81,7 @@ function EvaluationFields({ action, criteria, initialScores, draftKey, restoredT
 
   // 입력할 때마다 저장 (이벤트가 일어난 그 자리에서 바로 — 서버 요청이 없어 네트워크가 끊겨도 된다)
   function 임시_저장(next: string[]) {
+    if (draftKey === null) return;
     const ok = isWorthSaving(next, serverTexts) ? writeStored(draftKey, serializeDraft(criteria, next, new Date())) : writeStored(draftKey, null);
     setSaveFailed(!ok);
   }
@@ -89,14 +96,14 @@ function EvaluationFields({ action, criteria, initialScores, draftKey, restoredT
     setTexts(serverTexts);
     setTouched(criteria.map(() => false));
     setRestored(false);
-    writeStored(draftKey, null);
+    if (draftKey !== null) writeStored(draftKey, null);
   }
 
   // 제출은 서버 처리 결과를 받은 뒤에만 임시 저장을 지운다 (제출에 실패하면 입력이 남아 있어야 하므로)
   const [handledSave, setHandledSave] = useState<State | null>(null);
   if (state.saved && handledSave !== state) {
     setHandledSave(state);
-    writeStored(draftKey, null);
+    if (draftKey !== null) writeStored(draftKey, null);
     setRestored(false);
   }
 
@@ -155,16 +162,24 @@ function EvaluationFields({ action, criteria, initialScores, draftKey, restoredT
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending || !allValid}>
-          {pending ? "제출 중…" : alreadySubmitted || state.saved ? "수정해서 다시 제출" : "제출"}
+          {pending
+            ? proxy ? "저장 중…" : "제출 중…"
+            : proxy
+              ? alreadySubmitted || state.saved ? "수정 저장" : "대리 입력 저장"
+              : alreadySubmitted || state.saved ? "수정해서 다시 제출" : "제출"}
         </Button>
         {!allValid ? <span className="text-sm text-muted">모든 항목에 올바른 점수를 입력하면 제출할 수 있습니다.</span> : null}
       </div>
 
-      <p className="text-sm text-muted">
-        {saveFailed
-          ? "이 브라우저에서는 입력 중인 점수를 자동 저장할 수 없습니다. 화면을 닫기 전에 꼭 제출해 주세요."
-          : "입력 중인 점수는 이 기기에 자동 저장됩니다. 하지만 [제출]을 눌러야 담당자에게 전달됩니다."}
-      </p>
+      {proxy ? (
+        <p className="text-sm text-muted">종이로 받은 점수를 그대로 입력하세요. 저장하면 결과표에 &quot;대리 입력&quot;으로 표시됩니다. (입력 중인 점수는 자동 저장되지 않습니다)</p>
+      ) : (
+        <p className="text-sm text-muted">
+          {saveFailed
+            ? "이 브라우저에서는 입력 중인 점수를 자동 저장할 수 없습니다. 화면을 닫기 전에 꼭 제출해 주세요."
+            : "입력 중인 점수는 이 기기에 자동 저장됩니다. 하지만 [제출]을 눌러야 담당자에게 전달됩니다."}
+        </p>
+      )}
 
       {state.errors.length > 0 ? (
         <p role="alert" className="text-sm text-danger">
@@ -173,7 +188,9 @@ function EvaluationFields({ action, criteria, initialScores, draftKey, restoredT
       ) : null}
       {state.saved ? (
         <p role="status" className="rounded-md bg-background px-4 py-3 text-base text-success">
-          제출 완료 — 합계 {state.total}점. 마감 전까지는 같은 화면에서 고쳐 다시 제출할 수 있습니다.
+          {proxy
+            ? `대리 입력을 저장했습니다 — 합계 ${state.total}점. 마감 전까지는 같은 화면에서 고칠 수 있습니다.`
+            : `제출 완료 — 합계 ${state.total}점. 마감 전까지는 같은 화면에서 고쳐 다시 제출할 수 있습니다.`}
         </p>
       ) : null}
     </form>

@@ -67,3 +67,91 @@ export async function listMyAgendaStates(memberId: string, agendaIds: readonly s
   }
   return states;
 }
+
+// ─────────────────────────────────────────────
+// 담당 팀원의 대리 입력·수정 (PLAN 작업 19)
+// PRD 5번: 아직 제출하지 않은 평가 대상 위원에게만, 대리 입력 기록은 담당 팀원만 마감 전까지 고칠 수 있다.
+// 권한(담당 팀원) 확인은 이 함수를 부르는 서버 처리(app/admin/meetings/proxy-actions.ts)에서 먼저 한다.
+// ─────────────────────────────────────────────
+
+export type ProxyResult = "ok" | "not-found" | "closed" | "not-started" | "not-participant" | "recused" | "submitted" | "invalid-scores";
+
+/** 대리 입력(기록이 없을 때)·수정(대리 입력 기록일 때). 위원이 직접 제출한 기록이 있으면 "submitted"로 거부된다 */
+export async function saveProxyEvaluation(
+  meetingId: string,
+  agendaId: string,
+  memberId: string,
+  scores: readonly number[],
+): Promise<{ result: ProxyResult; created?: boolean; total?: number }> {
+  const { data, error } = await createAdminClient().rpc("save_proxy_evaluation", {
+    p_meeting_id: meetingId,
+    p_agenda_id: agendaId,
+    p_member_id: memberId,
+    p_scores: [...scores],
+  });
+  if (error) throw new Error(`대리 입력을 저장하지 못했습니다. (${error.message})`);
+  return data as { result: ProxyResult; created?: boolean; total?: number };
+}
+
+/** 대리 입력 화면의 칸 하나: 위원이 이 안건에 낸 평가 상태 */
+export type ProxyCell = {
+  memberId: string;
+  name: string;
+  /** none = 아직 안 냄(대리 입력 가능) / submitted = 위원이 앱에서 직접 제출 / proxy = 대리 입력됨 */
+  state: "none" | "submitted" | "proxy";
+  /** 대리 입력 기록의 합계 (위원이 직접 낸 점수는 마감 전에 보여 주지 않으므로 null) */
+  proxyTotal: number | null;
+};
+export type ProxyBoardAgenda = { agendaId: string; position: number; title: string; cells: ProxyCell[] };
+
+/**
+ * 안건별로 평가 대상 위원(참석 중이고 그 안건에서 제척되지 않은 위원)의 제출 상태.
+ * 위원이 직접 낸 점수는 담당 팀원에게도 마감 전에는 보여 주지 않는다(결과는 마감 후에만 열린다) — 냈는지 여부만 알려 준다.
+ */
+export async function getProxyBoard(meetingId: string): Promise<ProxyBoardAgenda[]> {
+  const db = createAdminClient();
+  const { data: agendas, error: e1 } = await db.from("agendas").select("id, position, title").eq("meeting_id", meetingId).order("position");
+  if (e1) throw new Error(`안건을 불러오지 못했습니다. (${e1.message})`);
+  if (!agendas?.length) return [];
+  const ids = agendas.map((a) => a.id);
+  const [참석, 제척, 평가] = await Promise.all([
+    db.from("meeting_members").select("member_id, members(name)").eq("meeting_id", meetingId).is("removed_at", null),
+    db.from("recusals").select("agenda_id, member_id").in("agenda_id", ids),
+    db.from("evaluations").select("agenda_id, member_id, is_proxy, total").in("agenda_id", ids),
+  ]);
+  const 오류 = 참석.error ?? 제척.error ?? 평가.error;
+  if (오류) throw new Error(`제출 상태를 불러오지 못했습니다. (${오류.message})`);
+
+  const 위원들 = (참석.data ?? [])
+    .map((p) => ({ memberId: p.member_id, name: p.members?.name ?? "" }))
+    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  return agendas.map((a) => ({
+    agendaId: a.id,
+    position: a.position,
+    title: a.title,
+    cells: 위원들
+      .filter((m) => !(제척.data ?? []).some((r) => r.agenda_id === a.id && r.member_id === m.memberId))
+      .map((m) => {
+        const e = (평가.data ?? []).find((x) => x.agenda_id === a.id && x.member_id === m.memberId);
+        return {
+          memberId: m.memberId,
+          name: m.name,
+          state: !e ? ("none" as const) : e.is_proxy ? ("proxy" as const) : ("submitted" as const),
+          proxyTotal: e?.is_proxy ? e.total : null,
+        };
+      }),
+  }));
+}
+
+/** 대리 입력 기록의 점수 (고치기 화면용). 위원이 직접 낸 기록은 돌려주지 않는다 */
+export async function getProxyScores(agendaId: string, memberId: string): Promise<number[] | null> {
+  const { data, error } = await createAdminClient()
+    .from("evaluations")
+    .select("scores, is_proxy")
+    .eq("agenda_id", agendaId)
+    .eq("member_id", memberId)
+    .maybeSingle();
+  if (error) throw new Error(`대리 입력 기록을 불러오지 못했습니다. (${error.message})`);
+  if (!data || !data.is_proxy || !Array.isArray(data.scores)) return null;
+  return data.scores.filter((v): v is number => typeof v === "number");
+}

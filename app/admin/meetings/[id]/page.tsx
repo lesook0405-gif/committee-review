@@ -5,6 +5,7 @@
 // 작업 13: 안건별 "열람 N / M"·"회의 전 열람 N / M" (M = 그 안건의 평가 대상 수).
 // 작업 14: 평가 기록이 0건인 안건만 [교체] (제외·제척 위원 기록, 대리 입력 포함). 교체하면 열람 기록 초기화.
 // 작업 18: 안건별 [제척 관리] — 담당 팀원이 마감 전까지 위원을 제척하고 해제한다. 팀장에게는 제척된 위원 이름만 보인다.
+// 작업 19: 담당 팀원의 [대리 입력·수정] 바로가기 (/admin/meetings/{id}/proxy).
 // 제출 현황(작업 20)은 다음 작업에서 이 화면에 붙인다.
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { ActionButton } from "@/components/ActionButton";
+import { LinkButton } from "@/components/Button";
 import { AgendaReplaceButton } from "@/components/AgendaReplaceButton";
 import { AgendaUploadForm } from "@/components/AgendaUploadForm";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
@@ -100,6 +102,18 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
       ) : null}
 
       <AgendaSection agendas={agendas} viewCounts={viewCounts} evaluationCounts={evaluationCounts} recusals={recusals} participants={participants.filter((p) => p.state === "participating")} meetingId={meeting.id} canEdit={canEdit} role={staff.role} />
+
+      {canEdit ? (
+        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-5">
+          <div>
+            <h2 className="text-lg font-semibold">대리 입력</h2>
+            <p className="text-sm text-muted">위원이 기기 문제로 제출하지 못했다면, 종이로 받은 점수를 대신 입력합니다.</p>
+          </div>
+          <LinkButton href={`/admin/meetings/${meeting.id}/proxy`} variant="secondary" prefetch={false}>
+            대리 입력·수정
+          </LinkButton>
+        </section>
+      ) : null}
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-5">
         <h2 className="mb-1 text-lg font-semibold">

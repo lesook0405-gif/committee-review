@@ -349,12 +349,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      evaluation_total: {
+        Args: { p_criteria: Json; p_scores: Json }
+        Returns: number
+      }
       replace_agenda_pdf: {
         Args: {
           p_agenda_id: string
           p_meeting_id: string
           p_new_path: string
           p_new_size: number
+        }
+        Returns: Json
+      }
+      save_proxy_evaluation: {
+        Args: {
+          p_agenda_id: string
+          p_meeting_id: string
+          p_member_id: string
+          p_scores: Json
         }
         Returns: Json
       }
