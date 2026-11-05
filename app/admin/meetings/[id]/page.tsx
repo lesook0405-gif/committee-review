@@ -6,6 +6,7 @@
 // 작업 14: 평가 기록이 0건인 안건만 [교체] (제외·제척 위원 기록, 대리 입력 포함). 교체하면 열람 기록 초기화.
 // 작업 18: 안건별 [제척 관리] — 담당 팀원이 마감 전까지 위원을 제척하고 해제한다. 팀장에게는 제척된 위원 이름만 보인다.
 // 작업 19: 담당 팀원의 [대리 입력·수정] 바로가기 (/admin/meetings/{id}/proxy).
+// 작업 21: 마감 후에만 보이는 [집계 결과 보기] (/admin/meetings/{id}/results, 담당 팀원·팀장).
 // 작업 20: 안건별 "제출 N / M", 회의 전체 "미제출 N명", 전원 제출 시에만 눌 수 있는 [평가 마감](담당 팀원만, 되돌릴 수 없음).
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -152,9 +153,14 @@ async function Meeting({ params }: PageProps<"/admin/meetings/[id]">) {
           </div>
         ) : null}
         {!isOpen ? (
-          <p className="mt-4 border-t border-border pt-4 font-semibold">
-            평가가 마감되었습니다{meeting.closedAt ? ` · ${formatKoreanDateTime(meeting.closedAt)}` : ""}. 마감된 회의는 점수를 낼 수도 고칠 수도 없습니다.
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <p className="font-semibold">
+              평가가 마감되었습니다{meeting.closedAt ? ` · ${formatKoreanDateTime(meeting.closedAt)}` : ""}. 마감된 회의는 점수를 낼 수도 고칠 수도 없습니다.
+            </p>
+            <LinkButton href={`/admin/meetings/${meeting.id}/results`} prefetch={false}>
+              집계 결과 보기
+            </LinkButton>
+          </div>
         ) : null}
       </section>
 
