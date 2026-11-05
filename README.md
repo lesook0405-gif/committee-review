@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 심사위원회 운영 서비스
 
-## Getting Started
+기업본부 심사위원회의 **안건 열람**과 **위원 평가·자동 집계**를 종이 없이 운영하는 웹 앱입니다.
+안건을 퀵·메일로 보내고 종이로 출력하던 일, 종이 평가표를 손으로 계산하던 일을 없애기 위해 만들었습니다.
 
-First, run the development server:
+> 이 저장소의 안건·위원 정보는 모두 지어낸 가상 데이터입니다. 실제 대외비 자료는 들어 있지 않습니다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 누가 무엇을 하나
+
+| 사용자 | 하는 일 |
+|---|---|
+| 담당 팀원 | 위원회·위원·회의를 등록하고, 안건 PDF를 올리고, 위원별 링크를 발급하고, 평가를 마감한 뒤 집계 결과를 확인합니다. |
+| 위원 | 받은 링크로 접속해 안건을 읽고, 회의 시작 시각부터 안건별로 점수를 입력·제출합니다. 자기 점수만 볼 수 있습니다. |
+| 팀장 | 위원회별 평가 결과를 열람합니다. (수정·위원 링크 조회는 불가) |
+
+## 주요 기능
+
+**1. 안건 업로드와 열람**
+- PDF만, 파일당 30MB 이하. 비공개 보관함에 저장하고 5분짜리 임시 주소로만 보여 줍니다.
+- 위원이 안건을 처음 연 시각을 기록해 "열람 N / M", "회의 전 열람 N / M"을 보여 줍니다.
+- 첫 평가가 제출되기 전까지만 PDF를 교체할 수 있습니다.
+
+**2. 위원 개별 평가와 자동 집계**
+- 위원회마다 평가 항목(최대 10개)·배점·가결 기준 점수·최고/최저점 제외 여부를 정합니다.
+- 위원별 합계의 평균으로 집계하고, 제출 5명 이상이면 최고·최저 1개씩 제외합니다.
+- 가결 여부는 반올림 전 평균으로 판단합니다. 소수 오차가 없도록 정수 연산으로 계산합니다.
+- 제척, 담당 팀원의 종이 평가 대리 입력, 전원 제출 후에만 가능한 마감을 지원합니다.
+- 입력 중인 점수는 위원의 기기에 자동 임시 저장됩니다.
+
+**보안**
+- 위원 링크는 위원마다 다른 추측하기 어려운 값이며, 재발급하면 기존 링크가 즉시 막히고 평가 마감 7일 뒤 만료됩니다.
+- 권한은 화면에서 숨기는 데 그치지 않고 서버에서 다시 확인합니다. 데이터베이스는 서버 전용 키로만 접근합니다.
+- 위원 휴대폰 번호는 화면에서 가운데를 가립니다. (010-****-1234)
+
+## 기술 스택
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase (데이터베이스·비공개 파일 보관함) · Zod · Vitest · Vercel
+
+## 문서
+
+- [PRD.md](PRD.md) — 서비스 기획서 (무엇을 만들지, 지킬 규칙)
+- [PLAN.md](PLAN.md) — 계획서 (성공 기준과 작업 순서)
+- [DESIGN.md](DESIGN.md) — 설계서 (화면·데이터·기술)
+- [CLAUDE.md](CLAUDE.md) — AI와 함께 개발할 때 지킨 프로젝트 규칙
+
+## 폴더 구조
+
+```
+app/        화면(페이지)과 서버 처리
+lib/rules/  PRD의 규칙 (집계 계산 등, 화면과 분리해 테스트)
+lib/db/     데이터 읽기·쓰기
+lib/auth/   로그인·위원 링크 확인
+supabase/   데이터베이스 마이그레이션
+scripts/    점검 스크립트
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 실행 방법
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. `npm install`
+2. `.env.local`에 아래 값을 채웁니다. (이 파일은 Git에 올라가지 않습니다)
+   - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+   - `MEMBER_LINK_SECRET`, `SESSION_SECRET` (각각 32자 이상의 무작위 값)
+3. `supabase/migrations/`의 마이그레이션을 Supabase 프로젝트에 적용합니다.
+4. 로그인 계정 정보(`STAFF_NAME`, `STAFF_EMAIL`, `STAFF_PASSWORD`)를 채우고 `npm run create-accounts`
+5. `npm run dev` → http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 검증
 
-## Learn More
+```
+npm run lint     코드 검사
+npm test         집계 규칙 등 자동 테스트
+npm run build    배포용 빌드
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+개발 서버를 켠 상태에서 `npm run check:e2e`(처음부터 끝까지), `npm run check:permissions`(권한), `npm run check:deploy`(배포 전 보안 점검)로 점검할 수 있습니다.
