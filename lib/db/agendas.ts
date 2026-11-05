@@ -40,6 +40,28 @@ export async function listAgendas(meetingId: string): Promise<AgendaRow[]> {
   }));
 }
 
+/** PDF 임시 열람 주소 유효 시간: 5분 (Design §7) */
+export const AGENDA_VIEW_URL_SECONDS = 5 * 60;
+
+/** 위원 열람용: 이 회의의 안건이면 안건 정보, 아니면 null (다른 회의 안건 ID를 넣어도 열리지 않게 회의로 함께 거른다) */
+export async function getMeetingAgenda(meetingId: string, agendaId: string) {
+  const { data, error } = await createAdminClient()
+    .from("agendas")
+    .select("id, position, title, pdf_path")
+    .eq("id", agendaId)
+    .eq("meeting_id", meetingId)
+    .maybeSingle();
+  if (error) throw new Error(`안건을 불러오지 못했습니다. (${error.message})`);
+  return data;
+}
+
+/** 비공개 보관함의 PDF를 5분만 열 수 있는 임시 주소 */
+export async function createAgendaViewUrl(pdfPath: string): Promise<string> {
+  const { data, error } = await createAdminClient().storage.from(BUCKET).createSignedUrl(pdfPath, AGENDA_VIEW_URL_SECONDS);
+  if (error || !data) throw new Error(`안건 PDF 주소를 만들지 못했습니다. (${error?.message ?? "알 수 없음"})`);
+  return data.signedUrl;
+}
+
 export type PrepareResult =
   | { kind: "ok"; path: string; uploadUrl: string }
   | { kind: "not-found" | "closed" };

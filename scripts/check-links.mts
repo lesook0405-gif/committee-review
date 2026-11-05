@@ -48,6 +48,12 @@ async function 보내기(경로: string, 쿠키값: string, 칸들: [string, str
 }
 
 // 서버 처리 ID (개발 서버가 만든 목록에서 이름으로 찾음)
+// 개발 서버가 다시 켜진 직후에는 서버 처리 목록이 비어 있으므로, 회의 상세 화면을 한 번 열어 목록을 채운다
+{
+  const { data: 담당자 } = await db.from("staff").select("id").eq("role", "staff").limit(1).maybeSingle();
+  const { data: 아무회의 } = await db.from("meetings").select("id").limit(1).maybeSingle();
+  if (담당자 && 아무회의) await fetch(`${APP_URL}/admin/meetings/${아무회의.id}`, { headers: { cookie: 쿠키(담당자.id, "staff") } });
+}
 const 목록 = JSON.parse(readFileSync(".next/dev/server/server-reference-manifest.json", "utf8")) as {
   node: Record<string, { exportedName: string; filename: string }>;
 };
