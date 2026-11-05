@@ -1,0 +1,493 @@
+/* 로그인 첫 화면 — 건물 사이로 올려다본 해질녘 사진 위에 문구, 오른쪽에 흰 로그인 카드, 하단에 위원 안내
+   크기는 모두 기준 화면(1672×941)의 "u" 단위다. 화면 크기에 맞춰 --u가 바뀌어 비율이 그대로 유지된다. */
+
+.lh-stage {
+  /* 기준 크기 값 (데스크톱) — 숫자는 u 단위 */
+  --u: max(0.62px, min(100vw / 1672, 100dvh / 941));
+  --pad-x: 92.5;
+  --top: 57;
+  --logo: 48;
+  --brand: 35.5;
+  --h1: 60;
+  --h1-lh: 68;
+  --h1-ls: -2.4;
+  --sub: 20;
+  --sub-lh: 28;
+  --note-fs: 16.5;
+  --note-w: 700;
+  --card-w: 742.4;
+  --inset-t: 18;
+  --inset-r: 18;
+  --inset-b: 22.5;
+  --form-w: 559;
+  --form-left: 96.2;
+  --h2: 46;
+  --lead: 19;
+  --label: 17.4;
+  --field: 66;
+  --btn: 66;
+  --foot: 16;
+  --org-w: 92;
+
+  --ink: #000;
+  --text2: #5f636b;
+  --muted: #898d94;
+  --ph: #95999f;
+  --line: #e2e4e7;
+  --card: #fefefe;
+  --btn-bg: #161515;
+  --amber: #f59a08;
+  --amber-soft: #fbae05;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: #fff;
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", "Noto Sans KR", system-ui, sans-serif;
+  background-color: #1b1208;
+}
+
+/* ── 사진과 영상 (코드로 그린 것은 없다. 사진 위에 그림자만 얹는다) ── */
+.lh-plate,
+.lh-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: -3;
+}
+.lh-plate {
+  background: url("https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/e781b542-a83d-4cf2-a66a-44085485865d.jpg") center / cover no-repeat;
+}
+.lh-video {
+  z-index: -2;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.lh-videoReady {
+  opacity: 1;
+}
+.lh-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, rgb(0 0 0 / 0.55), transparent calc(150 * var(--u))),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.45), transparent calc(140 * var(--u))),
+    linear-gradient(to top, rgb(20 10 0 / 0.55), transparent calc(420 * var(--u)));
+}
+
+/* ── 두 칸: 왼쪽 문구, 오른쪽 카드 ── */
+.lh-layout {
+  display: flex;
+  min-height: 100dvh;
+}
+.lh-hero {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--top) * var(--u)) calc(40 * var(--u)) calc(var(--inset-b) * var(--u)) calc(var(--pad-x) * var(--u));
+}
+
+.lh-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(20 * var(--u));
+}
+/* 오른쪽 위 기관 로고 — 사진 위에서도 파란 글자가 또렷하도록 흰 바탕을 깐다 */
+.lh-org {
+  flex: none;
+  display: none;
+  place-items: center;
+  padding: calc(8 * var(--u)) calc(14 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.22);
+}
+/* 넓은 화면: 카드 오른쪽 위 모서리 */
+.lh-orgCard {
+  position: absolute;
+  top: calc(28 * var(--u));
+  right: calc(34 * var(--u));
+  width: calc(var(--org-w) * var(--u));
+  height: auto;
+}
+.lh-orgLogo {
+  display: block;
+  width: calc(var(--org-w) * var(--u));
+  height: auto;
+}
+.lh-brand {
+  display: flex;
+  align-items: center;
+  gap: calc(14 * var(--u));
+}
+.lh-logo {
+  display: grid;
+  place-items: center;
+  width: calc(var(--logo) * var(--u));
+  height: calc(var(--logo) * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: #000;
+  font-size: calc(var(--logo) * 0.58 * var(--u));
+  font-weight: 800;
+  line-height: 1;
+  background-image: none;
+}
+.lh-logo span {
+  background: linear-gradient(135deg, #ffc233, #f58a07);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lh-brandName {
+  font-size: calc(var(--brand) * var(--u));
+  font-weight: 680;
+  letter-spacing: calc(-0.95 * var(--u));
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.35);
+}
+
+.lh-pitch {
+  margin-top: auto;
+}
+.lh-headline {
+  margin: 0;
+  font-size: calc(var(--h1) * var(--u));
+  line-height: calc(var(--h1-lh) * var(--u));
+  font-weight: 600;
+  letter-spacing: calc(var(--h1-ls) * var(--u));
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.35);
+}
+.lh-line {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.lh-line > span {
+  display: block;
+}
+.lh-subline {
+  margin: calc(19 * var(--u)) 0 0;
+  max-width: calc(780 * var(--u));
+  font-size: calc(var(--sub) * var(--u));
+  line-height: calc(var(--sub-lh) * var(--u));
+  font-weight: 460;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.4);
+}
+
+/* 위원 안내 — 화면 아래쪽 */
+.lh-members {
+  margin-top: calc(34 * var(--u));
+  max-width: calc(var(--note-w) * var(--u));
+  padding: calc(18 * var(--u)) calc(22 * var(--u));
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: calc(14 * var(--u));
+  background: rgb(20 10 0 / 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: calc(var(--note-fs) * var(--u));
+  line-height: 1.55;
+}
+.lh-membersTitle {
+  margin: 0 0 calc(4 * var(--u));
+  color: var(--amber-soft);
+  font-size: 1.06em;
+  font-weight: 700;
+}
+.lh-members p {
+  margin: 0;
+  font-weight: 450;
+}
+.lh-members p + p {
+  margin-top: calc(4 * var(--u));
+  color: rgb(255 255 255 / 0.82);
+}
+
+/* ── 로그인 카드 ── */
+.lh-panel {
+  flex: 0 0 calc(var(--card-w) * var(--u));
+  display: flex;
+  padding: calc(var(--inset-t) * var(--u)) calc(var(--inset-r) * var(--u)) calc(var(--inset-b) * var(--u)) 0;
+}
+.lh-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(24 * var(--u)) calc(var(--form-left) * var(--u));
+  position: relative;
+  border-radius: calc(20 * var(--u));
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.28);
+}
+.lh-formWrap {
+  width: 100%;
+  max-width: calc(var(--form-w) * var(--u));
+}
+.lh-title {
+  margin: 0;
+  font-size: calc(var(--h2) * var(--u));
+  font-weight: 660;
+  letter-spacing: calc(-1.9 * var(--u));
+  line-height: 1.15;
+}
+.lh-lead {
+  margin: calc(12 * var(--u)) 0 calc(34 * var(--u));
+  color: var(--text2);
+  font-size: calc(var(--lead) * var(--u));
+  line-height: 1.45;
+}
+
+.lh-form {
+  display: flex;
+  flex-direction: column;
+}
+.lh-label {
+  display: block;
+  margin-bottom: calc(9 * var(--u));
+  font-size: calc(var(--label) * var(--u));
+  font-weight: 560;
+}
+.lh-fieldBox {
+  position: relative;
+  margin-bottom: calc(22 * var(--u));
+}
+.lh-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: max(44px, calc(var(--field) * var(--u)));
+  padding: 0 calc(20 * var(--u));
+  border: 1px solid var(--line);
+  border-radius: calc(10 * var(--u));
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: max(16px, calc(19 * var(--u)));
+}
+.lh-input::placeholder {
+  color: var(--ph);
+}
+.lh-input:focus {
+  outline: 2px solid var(--amber);
+  outline-offset: 0;
+  border-color: var(--amber);
+}
+.lh-hasEye {
+  padding-right: calc(66 * var(--u) + 8px);
+}
+.lh-eye {
+  position: absolute;
+  top: 50%;
+  right: calc(8 * var(--u));
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: max(44px, calc(50 * var(--u)));
+  height: max(44px, calc(50 * var(--u)));
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.lh-eye:hover {
+  color: var(--ink);
+}
+.lh-eye:focus-visible {
+  outline: 2px solid var(--amber);
+}
+.lh-eye svg {
+  width: calc(26 * var(--u));
+  min-width: 20px;
+  height: auto;
+}
+
+.lh-error {
+  margin: 0 0 calc(18 * var(--u));
+  padding: calc(12 * var(--u)) calc(16 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: #fff1f1;
+  color: #b91c1c;
+  font-size: max(14px, calc(16.5 * var(--u)));
+  line-height: 1.4;
+}
+
+.lh-submit {
+  width: 100%;
+  min-height: max(44px, calc(var(--btn) * var(--u)));
+  margin-top: calc(16 * var(--u));
+  border: 0;
+  border-radius: 999px;
+  background: var(--btn-bg);
+  color: var(--amber);
+  font: inherit;
+  font-size: max(16px, calc(20 * var(--u)));
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+.lh-submit:hover:not(:disabled) {
+  background: #000;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.28);
+}
+.lh-submit:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 3px;
+}
+.lh-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lh-foot {
+  margin: calc(26 * var(--u)) 0 0;
+  padding-top: calc(22 * var(--u));
+  border-top: 1px solid var(--line);
+  color: var(--text2);
+  font-size: max(13px, calc(var(--foot) * var(--u)));
+  line-height: 1.5;
+}
+.lh-foot strong {
+  color: var(--amber);
+  font-weight: 650;
+}
+
+/* ── 들어올 때 움직임 (약 1.6초) ── */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(calc(18 * var(--u))); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wipe {
+  from { transform: translateY(105%); }
+  to { transform: none; }
+}
+@keyframes settle {
+  from { opacity: 0; transform: translateY(calc(30 * var(--u))) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+.lh-topbar { animation: rise 0.7s 0.05s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.lh-card { animation: settle 0.9s 0.1s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.lh-line > span { animation: wipe 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.lh-line:nth-child(1) > span { animation-delay: 0.25s; }
+.lh-line:nth-child(2) > span { animation-delay: 0.38s; }
+.lh-line:nth-child(3) > span { animation-delay: 0.51s; }
+.lh-subline { animation: rise 0.7s 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.lh-members { animation: rise 0.7s 0.95s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.lh-title { animation: rise 0.6s 0.45s backwards; }
+.lh-lead { animation: rise 0.6s 0.52s backwards; }
+.lh-fieldBox:nth-of-type(1) { animation: rise 0.6s 0.6s backwards; }
+.lh-fieldBox:nth-of-type(2) { animation: rise 0.6s 0.68s backwards; }
+.lh-submit { animation: rise 0.6s 0.78s backwards; }
+.lh-foot { animation: rise 0.6s 0.9s backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-topbar, .lh-card, .lh-line > span, .lh-subline, .lh-members, .lh-title, .lh-lead, .lh-fieldBox, .lh-submit, .lh-foot { animation: none; }
+  .lh-video { display: none; }
+}
+
+/* ── 태블릿·휴대폰 세로: 위에 사진과 문구, 아래에 카드 (390×844 기준) ── */
+@media (max-width: 900px) and (orientation: portrait), (max-width: 620px) {
+  .lh-stage {
+    --u: min(100vw / 390, 100dvh / 844);
+    --pad-x: 24;
+    --top: 28;
+    --logo: 38;
+    --brand: 25;
+    --h1: 31;
+    --h1-lh: 37;
+    --h1-ls: -1.1;
+    --sub: 14;
+    --sub-lh: 20;
+    --note-fs: 13;
+    --note-w: 9999;
+    --card-w: 0;
+    --inset-t: 0;
+    --inset-r: 12;
+    --inset-b: 12;
+    --form-w: 9999;
+    --form-left: 22;
+    --h2: 28;
+    --lead: 14;
+    --label: 14;
+    --field: 54;
+    --btn: 56;
+    --foot: 13;
+    --org-w: 54;
+  }
+  .lh-org { display: grid; }
+  .lh-orgCard { display: none; }
+  .lh-layout {
+    flex-direction: column;
+  }
+  .lh-hero {
+    padding: calc(var(--top) * var(--u)) calc(var(--pad-x) * var(--u)) calc(20 * var(--u));
+    min-height: 44dvh;
+  }
+  .lh-panel {
+    flex: 0 0 auto;
+    padding: 0 calc(var(--inset-r) * var(--u)) calc(var(--inset-b) * var(--u));
+  }
+  .lh-card {
+    padding: calc(24 * var(--u)) calc(var(--form-left) * var(--u));
+  }
+  .lh-members {
+    margin-top: calc(18 * var(--u));
+  }
+  .lh-lead { margin-bottom: calc(22 * var(--u)); }
+  .lh-fieldBox { margin-bottom: calc(14 * var(--u)); }
+  .lh-line { white-space: normal; }
+}
+/* 키가 작은 화면(세로)에서는 부제목을 줄인다 */
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
+  .lh-subline { display: none; }
+}
+
+/* ── 가로로 든 휴대폰: 좌우로 나란히 (700×390 기준) ── */
+@media (max-height: 480px) and (orientation: landscape) and (max-width: 950px) {
+  .lh-stage {
+    --u: min(100vw / 700, 100dvh / 390);
+    --pad-x: 28;
+    --top: 20;
+    --logo: 28;
+    --brand: 20;
+    --h1: 24;
+    --h1-lh: 29;
+    --h1-ls: -0.8;
+    --sub: 11;
+    --sub-lh: 15;
+    --note-fs: 10.5;
+    --note-w: 330;
+    --card-w: 300;
+    --inset-t: 10;
+    --inset-r: 10;
+    --inset-b: 10;
+    --form-w: 9999;
+    --form-left: 22;
+    --h2: 22;
+    --lead: 11;
+    --label: 11.5;
+    --field: 36;
+    --btn: 38;
+    --foot: 10.5;
+    --org-w: 36;
+  }
+  .lh-org { display: grid; }
+  .lh-orgCard { display: none; }
+  .lh-layout { flex-direction: row; }
+  .lh-hero { padding: calc(var(--top) * var(--u)) calc(16 * var(--u)) calc(14 * var(--u)) calc(var(--pad-x) * var(--u)); min-height: 0; }
+  .lh-panel { flex: 0 0 calc(var(--card-w) * var(--u)); padding: calc(var(--inset-t) * var(--u)) calc(var(--inset-r) * var(--u)) calc(var(--inset-b) * var(--u)) 0; }
+  .lh-card { padding: calc(12 * var(--u)) calc(var(--form-left) * var(--u)); }
+  .lh-subline { display: none; }
+  .lh-lead { margin: calc(6 * var(--u)) 0 calc(12 * var(--u)); }
+  .lh-fieldBox { margin-bottom: calc(10 * var(--u)); }
+  .lh-foot { margin-top: calc(12 * var(--u)); padding-top: calc(10 * var(--u)); }
+  .lh-members { margin-top: calc(12 * var(--u)); padding: calc(10 * var(--u)) calc(12 * var(--u)); }
+}
